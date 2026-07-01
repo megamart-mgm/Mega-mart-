@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mega Mart - Seller Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#3e4a3d",
+                    "surface-container": "#e5eeff",
+                    "on-surface": "#0b1c30",
+                    "surface-container-low": "#eff4ff",
+                    "primary-container": "#00873a",
+                    "tertiary-fixed-dim": "#c4c7c9",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-primary-container": "#f7fff2",
+                    "on-tertiary-container": "#fbfdff",
+                    "on-secondary": "#ffffff",
+                    "secondary-fixed": "#e2e2e2",
+                    "surface-variant": "#d3e4fe",
+                    "secondary-container": "#dfe0e0",
+                    "on-tertiary-fixed": "#191c1e",
+                    "tertiary": "#595c5e",
+                    "inverse-primary": "#62df7d",
+                    "on-primary-fixed": "#002109",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "on-secondary-container": "#616363",
+                    "secondary": "#5d5f5f",
+                    "primary": "#006b2c",
+                    "tertiary-fixed": "#e0e3e5",
+                    "surface": "#f8f9ff",
+                    "surface-bright": "#f8f9ff",
+                    "outline": "#6e7b6c",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "inverse-surface": "#213145",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-on-surface": "#eaf1ff",
+                    "tertiary-container": "#727577",
+                    "on-tertiary": "#ffffff",
+                    "background": "#f8f9ff",
+                    "on-secondary-fixed-variant": "#454747",
+                    "on-tertiary-fixed-variant": "#444749",
+                    "outline-variant": "#bdcaba",
+                    "surface-container-high": "#dce9ff",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#7ffc97",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#d3e4fe",
+                    "surface-tint": "#006e2d",
+                    "surface-dim": "#cbdbf5",
+                    "primary-fixed-dim": "#62df7d",
+                    "on-primary-fixed-variant": "#005320",
+                    "on-background": "#0b1c30",
+                    "error-container": "#ffdad6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "gutter": "16px",
+                    "container-max": "1280px",
+                    "2xl": "48px",
+                    "base": "4px",
+                    "md": "16px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .sidebar-active { background-color: #e5eeff; color: #006b2c; border-right: 4px solid #006b2c; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-md h-16 shadow-sm bg-surface">
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95" id="menu-toggle">menu</button>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Mega Mart</span>
+</div>
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95">notifications</button>
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">SA</div>
+</div>
+</header>
+<!-- Drawer / Sidebar Overlay -->
+<div class="fixed inset-0 bg-black/50 z-[60] hidden" id="drawer-overlay"></div>
+<!-- Sidebar Menu -->
+<aside class="fixed top-0 left-0 h-full w-64 bg-surface-container-lowest z-[70] transition-transform -translate-x-full shadow-xl overflow-y-auto" id="sidebar">
+<div class="p-lg flex flex-col h-full">
+<div class="flex items-center justify-between mb-lg">
+<span class="font-bold text-primary text-xl">Seller Hub</span>
+<button class="material-symbols-outlined" id="close-drawer">close</button>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="sidebar-active flex items-center gap-sm p-sm rounded-r-lg font-label-md" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+                </a>
+<div class="pt-md pb-xs px-sm text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Products</div>
+<div class="space-y-1">
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">inventory_2</span> All Products
+                    </a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">add_circle</span> Add New
+                    </a>
+<div class="ml-8 space-y-1">
+<a class="block p-xs text-sm text-on-surface-variant hover:text-primary" href="#">Physical</a>
+<a class="block p-xs text-sm text-on-surface-variant hover:text-primary" href="#">Digital</a>
+<a class="block p-xs text-sm text-on-surface-variant hover:text-primary" href="#">Subscription</a>
+</div>
+</div>
+<div class="pt-md pb-xs px-sm text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Sales &amp; Customers</div>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">receipt_long</span> All Sales
+                </a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">shopping_cart_checkout</span> Abandoned Cart
+                </a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">group</span> Customers
+                </a>
+<div class="pt-md pb-xs px-sm text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Finances</div>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span> Wallet
+                </a>
+<div class="pt-md pb-xs px-sm text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Settings</div>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">store</span> Store Settings
+                </a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">person_outline</span> Profile Settings
+                </a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">payments</span> Payment Settings
+                </a>
+</nav>
+</div>
+</aside>
+<main class="mt-20 px-md max-w-container-max mx-auto space-y-lg">
+<!-- Dashboard Header & Action -->
+<div class="flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Dashboard</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Quick overview of your shop</p>
+</div>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg font-bold flex items-center gap-xs shadow-md active:scale-95 transition-all">
+<span class="material-symbols-outlined">add</span>
+<span>Add New Product</span>
+</button>
+</div>
+</div>
+<!-- Summary Section (Mega Mart Green Palette) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<div class="bg-primary-container/10 p-lg rounded-xl border border-primary/20 flex flex-col gap-xs">
+<span class="text-on-surface-variant font-label-md">Total Sales</span>
+<div class="flex items-end justify-between">
+<span class="text-3xl font-bold text-primary">$12,840.00</span>
+<span class="text-primary text-sm flex items-center font-bold">
+<span class="material-symbols-outlined text-sm mr-1">trending_up</span>15%
+                    </span>
+</div>
+</div>
+<div class="bg-primary-container/10 p-lg rounded-xl border border-primary/20 flex flex-col gap-xs">
+<span class="text-on-surface-variant font-label-md">Total Customers</span>
+<div class="flex items-end justify-between">
+<span class="text-3xl font-bold text-primary">842</span>
+<span class="text-primary text-sm flex items-center font-bold">
+<span class="material-symbols-outlined text-sm mr-1">person_add</span>+24
+                    </span>
+</div>
+</div>
+<div class="bg-primary-container/10 p-lg rounded-xl border border-primary/20 flex flex-col gap-xs">
+<span class="text-on-surface-variant font-label-md">Store Views</span>
+<div class="flex items-end justify-between">
+<span class="text-3xl font-bold text-primary">2,105</span>
+<span class="text-primary text-sm flex items-center font-bold">
+<span class="material-symbols-outlined text-sm mr-1">visibility</span>Live
+                    </span>
+</div>
+</div>
+</div>
+<!-- Performance Graph (Keeping Existing) -->
+<div class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant/20 shadow-sm">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Store Performance</h2>
+<select class="bg-surface-container-low border-none rounded-lg text-label-md font-label-md focus:ring-2 focus:ring-primary">
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+</select>
+</div>
+<div class="relative h-64 w-full">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 400 100">
+<path class="stroke-primary fill-none" d="M0,80 Q50,70 80,40 T160,50 T240,20 T320,60 T400,30" stroke-width="3"></path>
+<path d="M0,80 Q50,70 80,40 T160,50 T240,20 T320,60 T400,30 V100 H0 Z" fill="url(#gradient)" opacity="0.1"></path>
+<defs>
+<lineargradient id="gradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#006b2c"></stop>
+<stop offset="100%" stop-color="transparent"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute bottom-0 left-0 w-full flex justify-between px-xs text-label-sm font-label-sm text-on-surface-variant opacity-60">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+</div>
+<!-- Secondary Info Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+<!-- Inventory Alerts (Condensed) -->
+<div class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant/20 shadow-sm">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Low Stock Items</h2>
+<a class="text-primary text-label-md font-bold hover:underline" href="#">View All</a>
+</div>
+<div class="space-y-sm">
+<div class="flex items-center justify-between p-sm hover:bg-surface-container-low rounded-lg transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-surface-container-high rounded overflow-hidden">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5G9CjOP4k96nsekaT0jG6jA_V8g7X1uCmm51O1zrHm1NrW1Baby7B9wd0pQsKtLus4tkoGMxRC7lpU2BDww04WuWWrsy0Kc3HnDSjG9Ib40dsPOcis9Yq-vA_QGYyFn9yCzNb1sY-B1pb4bJxdoRMgzDj1C5C8p9B4PVKYX8pObjEaQ17otqVXiONqs131xeQ9uc9B7UGN1h5Q1FMgtUfLhpHs9rtCmJ4m8quIzeZg7qo9OekffZ4IyJra9Tyg0n6i1CXCnaHofxq"/>
+</div>
+<span class="font-label-md">Smartphone X Pro</span>
+</div>
+<span class="text-error font-bold text-sm">2 Left</span>
+</div>
+<div class="flex items-center justify-between p-sm hover:bg-surface-container-low rounded-lg transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-surface-container-high rounded overflow-hidden">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC747ASPJHwhBPXex41-CdQC86gqvhx1bkzwuZW-VpfxPBP8Sf-7lu9mBwskgj4H40rUcFEObrWsIiz8g-wdX2p1ZylheN3aQO5G5zF9fpCyhnuhtKQ-iub_9NUSHgb1Mm75-MmWbLvF8vDXGYc6HyNhec4yOk8rUh9Vnsqoc-gcrGrz_E9Rcmt9CWbjdQpCG1ozCiuEFgQRzQZbcgC14flxb_zHPB4R20sqAGi6q9uXryYRB0lHldK_uG2cmiZxln4909sc_dCjASm"/>
+</div>
+<span class="font-label-md">Mech Keyboard</span>
+</div>
+<span class="text-error font-bold text-sm">5 Left</span>
+</div>
+</div>
+</div>
+<!-- Quick Tips -->
+<div class="bg-inverse-surface rounded-xl p-lg text-on-primary flex flex-col justify-between">
+<div>
+<h3 class="text-headline-md font-bold mb-xs">Pro Tip: Sell More</h3>
+<p class="text-surface-variant font-body-md">Share your store link on Instagram to reach 40% more customers this weekend.</p>
+</div>
+<div class="mt-md flex gap-sm">
+<button class="bg-primary text-on-primary px-md py-xs rounded-lg text-sm font-bold">Copy Store Link</button>
+<button class="bg-white/10 text-white px-md py-xs rounded-lg text-sm font-bold">Learn More</button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Persistent Mega Mart Style) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-sm py-xs bg-surface shadow-[0_-1px_3px_0_rgba(0,0,0,0.05)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span class="font-label-sm text-label-sm">Store</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="font-label-sm text-label-sm">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined">add_business</span>
+<span class="font-label-sm text-label-sm">Sell</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            const drawerOverlay = document.getElementById('drawer-overlay');
+            const closeDrawer = document.getElementById('close-drawer');
+
+            const toggleDrawer = () => {
+                sidebar.classList.toggle('-translate-x-full');
+                drawerOverlay.classList.toggle('hidden');
+            };
+
+            menuToggle.addEventListener('click', toggleDrawer);
+            closeDrawer.addEventListener('click', toggleDrawer);
+            drawerOverlay.addEventListener('click', toggleDrawer);
+        });
+    </script>
+</body></html>
