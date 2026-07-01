@@ -7,7 +7,8 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script async="" defer="" src="https://www.google.com/recaptcha/api.js"></script>
 <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -16,11 +17,59 @@
             font-family: 'Inter', sans-serif;
             background-color: #f8f9ff;
         }
-        /* Focus ring transition */
         .input-focus-ring:focus {
             outline: none;
             border-color: #006b2c;
             box-shadow: 0 0 0 3px rgba(0, 107, 44, 0.15);
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 28, 48, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .role-card {
+            transition: all 0.15s ease;
+        }
+        .role-card:hover {
+            border-color: #006b2c;
+            box-shadow: 0 0 0 3px rgba(0, 107, 44, 0.1);
+        }
+        #form_error {
+            display: none;
+        }
+        #form_error.active {
+            display: block;
+        }
+        .legal-modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .legal-modal-body h3 {
+            font-weight: 600;
+            color: #0b1c30;
+            margin-top: 16px;
+            margin-bottom: 4px;
+        }
+        .legal-modal-body h3:first-child {
+            margin-top: 0;
+        }
+        .legal-modal-body p, .legal-modal-body li {
+            font-size: 14px;
+            line-height: 22px;
+            color: #3e4a3d;
+        }
+        .legal-modal-body ul {
+            list-style: disc;
+            padding-left: 20px;
+            margin-bottom: 8px;
         }
     </style>
 <script id="tailwind-config">
@@ -118,14 +167,8 @@
             }
         }
     </script>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
   </head>
 <body class="bg-background min-h-screen flex flex-col">
-<!-- TopAppBar for Brand Anchor -->
 <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-md h-16 bg-surface shadow-sm">
 <div class="flex items-center gap-sm">
 <span class="material-symbols-outlined text-primary" data-icon="storefront">storefront</span>
@@ -137,14 +180,16 @@
 </header>
 <main class="flex-grow flex items-center justify-center pt-24 pb-12 px-gutter">
 <div class="w-full max-w-[480px] bg-surface-container-lowest rounded-xl shadow-sm p-xl md:p-2xl border border-surface-container">
-<!-- Welcome Header -->
 <div class="mb-xl text-center md:text-left">
 <h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface mb-xs">Join Mega Mart</h1>
 <p class="font-body-md text-body-md text-on-surface-variant">Create your account to start shopping and track orders.</p>
 </div>
-<!-- Sign Up Form -->
-<form action="#" class="space-y-lg" method="POST">
-<!-- Full Name -->
+
+<div class="mb-lg p-md bg-error-container rounded-lg" id="form_error">
+<p class="font-label-md text-label-md text-on-error-container" id="form_error_text">Something went wrong.</p>
+</div>
+
+<form class="space-y-lg" id="signup_form">
 <div class="space-y-xs">
 <label class="block font-label-md text-label-md text-on-surface-variant" for="full_name">Full Name</label>
 <div class="relative">
@@ -152,7 +197,6 @@
 <input class="w-full h-12 pl-10 pr-4 bg-white border border-[#E2E8F0] rounded-lg input-focus-ring transition-all placeholder:text-outline-variant font-body-md text-body-md" id="full_name" name="full_name" placeholder="John Doe" required="" type="text"/>
 </div>
 </div>
-<!-- Email Address -->
 <div class="space-y-xs">
 <label class="block font-label-md text-label-md text-on-surface-variant" for="email">Email Address</label>
 <div class="relative">
@@ -160,17 +204,14 @@
 <input class="w-full h-12 pl-10 pr-4 bg-white border border-[#E2E8F0] rounded-lg input-focus-ring transition-all placeholder:text-outline-variant font-body-md text-body-md" id="email" name="email" placeholder="name@example.com" required="" type="email"/>
 </div>
 </div>
-<!-- Password Row -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
-<!-- Password -->
 <div class="space-y-xs">
 <label class="block font-label-md text-label-md text-on-surface-variant" for="password">Password</label>
 <div class="relative">
 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-tertiary text-[20px]" data-icon="lock">lock</span>
-<input class="w-full h-12 pl-10 pr-4 bg-white border border-[#E2E8F0] rounded-lg input-focus-ring transition-all placeholder:text-outline-variant font-body-md text-body-md" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+<input class="w-full h-12 pl-10 pr-4 bg-white border border-[#E2E8F0] rounded-lg input-focus-ring transition-all placeholder:text-outline-variant font-body-md text-body-md" id="password" minlength="6" name="password" placeholder="••••••••" required="" type="password"/>
 </div>
 </div>
-<!-- Confirm Password -->
 <div class="space-y-xs">
 <label class="block font-label-md text-label-md text-on-surface-variant" for="confirm_password">Confirm Password</label>
 <div class="relative">
@@ -179,40 +220,19 @@
 </div>
 </div>
 </div>
-<!-- Terms & Privacy -->
 <div class="flex items-start gap-sm py-xs">
 <input class="mt-1 w-4 h-4 rounded border-[#E2E8F0] text-primary focus:ring-primary/20 cursor-pointer" id="terms" required="" type="checkbox"/>
 <label class="font-label-sm text-label-sm text-on-surface-variant leading-tight cursor-pointer" for="terms">
-                        I agree to the <a class="text-primary hover:underline" href="#">Terms of Service</a> and <a class="text-primary hover:underline" href="#">Privacy Policy</a>.
+                        I agree to the <a class="text-primary hover:underline" href="javascript:void(0)" id="terms_link">Terms of Service</a> and <a class="text-primary hover:underline" href="javascript:void(0)" id="privacy_link">Privacy Policy</a>.
                     </label>
 </div>
-<!-- Action Button -->
-<button class="w-full h-[48px] bg-primary text-white font-headline-md text-headline-md rounded-lg shadow-sm hover:brightness-95 active:scale-[0.98] transition-all flex items-center justify-center gap-sm" type="submit">
-                    Create Account
-                    <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+<div class="g-recaptcha" data-sitekey="6LfXUj8tAAAAAMKBxmw3kC-ehwQrOSb_YRTWV77e"></div>
+<button class="w-full h-[48px] bg-primary text-white font-headline-md text-headline-md rounded-lg shadow-sm hover:brightness-95 active:scale-[0.98] transition-all flex items-center justify-center gap-sm disabled:opacity-60 disabled:cursor-not-allowed" id="submit_btn" type="submit">
+<span id="submit_btn_text">Create Account</span>
+<span class="material-symbols-outlined" data-icon="arrow_forward" id="submit_btn_icon">arrow_forward</span>
 </button>
 </form>
-<!-- Divider -->
-<div class="relative my-xl">
-<div class="absolute inset-0 flex items-center">
-<div class="w-full border-t border-surface-container-high"></div>
-</div>
-<div class="relative flex justify-center text-label-sm text-label-sm uppercase">
-<span class="bg-surface-container-lowest px-md text-tertiary">Or sign up with</span>
-</div>
-</div>
-<!-- Social Sign Up -->
-<div class="grid grid-cols-2 gap-md">
-<button class="flex items-center justify-center h-12 border border-[#E2E8F0] rounded-lg hover:bg-surface-container-low transition-colors font-label-md text-label-md text-on-surface">
-<img alt="Google" class="w-5 h-5 mr-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCoU9nBOlTnOlyMjfbpIJx-mWMTPAndRslu3r1zrVgkYLUZ9NlfCkChvYzftwvUaF0AKLoJQx6ZwnqYVfPtck4yk1hlwGuxN4CGyJWr-yD3tHzDpMSVJ82gtBb6qY7qMDI7_yV3Gmo_6G1Y_vugvrMgtz9RfxRZN3aDURwYEDrLqm-blUPOWP83YQfLUEQkpburec0K3e-W3L7gDEAZTTzmBeOegyfWAaQJAtXXuqt0vx4a_Ueso5HCpgFNiQ6EXjCG1Mb9OwkJn-is"/>
-                    Google
-                </button>
-<button class="flex items-center justify-center h-12 border border-[#E2E8F0] rounded-lg hover:bg-surface-container-low transition-colors font-label-md text-label-md text-on-surface">
-<span class="material-symbols-outlined mr-sm text-primary" data-icon="apple" data-weight="fill">apps</span>
-                    Apple
-                </button>
-</div>
-<!-- Login Link -->
+
 <div class="mt-xl text-center">
 <p class="font-body-md text-body-md text-on-surface-variant">
                     Already have an account? 
@@ -221,7 +241,165 @@
 </div>
 </div>
 </main>
-<!-- Footer for Mobile/Web consistency -->
+
+<!-- Client / Seller selection modal -->
+<div class="modal-overlay" id="role_modal">
+<div class="w-full max-w-[420px] bg-surface-container-lowest rounded-xl shadow-sm p-xl border border-surface-container">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-xs text-center">Welcome to Mega Mart!</h2>
+<p class="font-body-md text-body-md text-on-surface-variant text-center mb-lg">How do you want to use your account?</p>
+<div class="grid grid-cols-2 gap-md">
+<button class="role-card flex flex-col items-center gap-sm p-lg border-2 border-[#E2E8F0] rounded-lg bg-white" data-role="client" id="role_client_btn" type="button">
+<span class="material-symbols-outlined text-primary text-[32px]" data-icon="shopping_bag">shopping_bag</span>
+<span class="font-label-md text-label-md text-on-surface">I'm a Client</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant text-center">I want to shop</span>
+</button>
+<button class="role-card flex flex-col items-center gap-sm p-lg border-2 border-[#E2E8F0] rounded-lg bg-white" data-role="seller" id="role_seller_btn" type="button">
+<span class="material-symbols-outlined text-primary text-[32px]" data-icon="storefront">storefront</span>
+<span class="font-label-md text-label-md text-on-surface">I'm a Seller</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant text-center">I want to sell</span>
+</button>
+</div>
+</div>
+</div>
+
+<!-- Terms of Service modal -->
+<div class="modal-overlay" id="terms_modal">
+<div class="w-full max-w-[600px] bg-surface-container-lowest rounded-xl shadow-sm p-xl border border-surface-container">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Terms of Service</h2>
+<button class="text-tertiary hover:text-on-surface" data-close-modal="terms_modal" type="button">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="legal-modal-body pr-2">
+<p class="mb-md text-on-surface-variant"><em>Effective Date: January 1, 2025 &nbsp;|&nbsp; Last Updated: January 1, 2025</em></p>
+<p>These Terms of Service ("Terms") govern your access to and use of Mega Mart, a marketplace platform connecting buyers and sellers. By creating an account, you agree to these Terms.</p>
+
+<h3>1. Eligibility</h3>
+<p>You must be at least 18 years old, or the age of legal majority in your jurisdiction, to create an account and use Mega Mart.</p>
+
+<h3>2. Account Types</h3>
+<ul>
+<li><strong>Clients (Buyers):</strong> May browse listings and purchase products or services from sellers on the platform.</li>
+<li><strong>Sellers:</strong> May list products or services for sale, subject to our seller policies and applicable fees.</li>
+</ul>
+
+<h3>3. Account Responsibilities</h3>
+<p>You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. Notify us immediately of any unauthorized use.</p>
+
+<h3>4. Seller Obligations</h3>
+<p>Sellers agree to provide accurate product descriptions, honor listed prices, fulfill orders in a timely manner, and comply with all applicable consumer protection and trade laws.</p>
+
+<h3>5. Prohibited Conduct</h3>
+<ul>
+<li>Listing counterfeit, stolen, or illegal goods</li>
+<li>Fraudulent transactions or misrepresentation</li>
+<li>Harassment or abuse of other users</li>
+<li>Circumventing platform fees</li>
+</ul>
+
+<h3>6. Payments and Fees</h3>
+<p>Transactions are processed through our third-party payment partners. Mega Mart may charge service or transaction fees, which will be disclosed before a sale is completed.</p>
+
+<h3>7. Termination</h3>
+<p>We may suspend or terminate accounts that violate these Terms, engage in fraudulent activity, or pose a risk to other users of the platform.</p>
+
+<h3>8. Limitation of Liability</h3>
+<p>Mega Mart acts as a marketplace facilitator and is not a party to transactions between buyers and sellers. We are not liable for the quality, safety, or legality of items listed by sellers.</p>
+
+<h3>9. Changes to These Terms</h3>
+<p>We may update these Terms from time to time. Continued use of the platform after changes are posted constitutes acceptance of the revised Terms.</p>
+
+<h3>10. Contact Us</h3>
+<p>Questions about these Terms can be sent to: <strong>support@megamart.com</strong></p>
+<p class="mt-md text-on-surface-variant"><em>Note: this is a starter Terms of Service template — have a lawyer review and tailor it to your actual business model and jurisdiction before going live.</em></p>
+</div>
+</div>
+</div>
+
+<!-- Privacy Policy modal -->
+<div class="modal-overlay" id="privacy_modal">
+<div class="w-full max-w-[600px] bg-surface-container-lowest rounded-xl shadow-sm p-xl border border-surface-container">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Privacy Policy</h2>
+<button class="text-tertiary hover:text-on-surface" data-close-modal="privacy_modal" type="button">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="legal-modal-body pr-2">
+<p class="mb-md text-on-surface-variant"><em>Effective Date: January 1, 2025 &nbsp;|&nbsp; Last Updated: January 1, 2025</em></p>
+<p>Welcome to Mega Mart. We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website and use our platform.</p>
+
+<h3>1. Information We Collect</h3>
+<p>We collect information you provide directly to us when you:</p>
+<ul>
+<li>Create an account (name, email address, password)</li>
+<li>Set up a seller profile (business name, contact details, payment information)</li>
+<li>List products or services on our platform</li>
+<li>Make or receive payments through our platform</li>
+<li>Contact our support team</li>
+</ul>
+<p>We also automatically collect certain information when you use our platform, including IP address, browser type, pages visited, and device information.</p>
+
+<h3>2. How We Use Your Information</h3>
+<p>We use the information we collect to:</p>
+<ul>
+<li>Create and manage your account</li>
+<li>Process transactions and send related information</li>
+<li>Send promotional communications (with your consent)</li>
+<li>Respond to your inquiries and provide customer support</li>
+<li>Monitor and analyze usage and trends to improve our platform</li>
+<li>Detect and prevent fraudulent transactions and other illegal activities</li>
+<li>Comply with legal obligations</li>
+</ul>
+
+<h3>3. Sharing of Your Information</h3>
+<p>We do not sell, trade, or rent your personal information to third parties. We may share your information with:</p>
+<ul>
+<li><strong>Service Providers:</strong> Third-party vendors who assist us in operating our platform (payment processors, email providers, cloud storage)</li>
+<li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets</li>
+<li><strong>Legal Requirements:</strong> When required by law or to protect the rights, property, or safety of Mega Mart, our users, or the public</li>
+</ul>
+
+<h3>4. Data Security</h3>
+<p>We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the Internet is 100% secure. We encourage you to use strong passwords and keep your account credentials confidential.</p>
+
+<h3>5. Payment Information</h3>
+<p>All payment transactions are processed through secure third-party payment gateways (such as Paystack, Flutterwave, or Stripe). We do not store your full card details on our servers. Payment processors are PCI-DSS compliant.</p>
+
+<h3>6. Cookies</h3>
+<p>We use cookies and similar tracking technologies to track activity on our platform and hold certain information. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent. However, some features of our platform may not function properly if cookies are disabled.</p>
+
+<h3>7. Your Rights</h3>
+<p>You have the right to:</p>
+<ul>
+<li>Access the personal information we hold about you</li>
+<li>Request correction of inaccurate or incomplete data</li>
+<li>Request deletion of your personal data</li>
+<li>Withdraw consent at any time where we rely on consent to process your data</li>
+<li>Opt out of marketing communications</li>
+</ul>
+<p>To exercise any of these rights, please contact us at privacy@megamart.com.</p>
+
+<h3>8. Third-Party Links</h3>
+<p>Our platform may contain links to third-party websites. We are not responsible for the privacy practices or content of those sites. We encourage you to review the privacy policies of any third-party sites you visit.</p>
+
+<h3>9. Children's Privacy</h3>
+<p>Our platform is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we will delete it immediately.</p>
+
+<h3>10. Changes to This Policy</h3>
+<p>We may update this Privacy Policy from time to time. We will notify you of any significant changes by posting the new policy on this page and updating the "Last Updated" date. Your continued use of our platform after changes are posted constitutes your acceptance of the updated policy.</p>
+
+<h3>11. Contact Us</h3>
+<p>If you have questions or concerns about this Privacy Policy, please contact us:</p>
+<ul>
+<li>Email: privacy@megamart.com</li>
+<li>Address: Mega Mart HQ, Lagos, Nigeria</li>
+</ul>
+</div>
+</div>
+</div>
+
 <footer class="py-lg border-t border-surface-container mt-auto">
 <div class="max-w-container-max mx-auto px-gutter flex flex-col md:flex-row justify-between items-center gap-md">
 <div class="font-label-sm text-label-sm text-on-surface-variant">
@@ -234,31 +412,148 @@
 </div>
 </div>
 </footer>
-<!-- Simple validation micro-interaction -->
+
 <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const password = document.getElementById('password');
-            const confirm = document.getElementById('confirm_password');
-            const form = document.querySelector('form');
+    // ---- Supabase setup ----
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-            form.addEventListener('submit', (e) => {
-                if (password.value !== confirm.value) {
-                    e.preventDefault();
-                    confirm.classList.add('border-error');
-                    confirm.classList.remove('border-[#E2E8F0]');
-                    alert('Passwords do not match. Please try again.');
-                }
-            });
+    const form = document.getElementById('signup_form');
+    const password = document.getElementById('password');
+    const confirm = document.getElementById('confirm_password');
+    const submitBtn = document.getElementById('submit_btn');
+    const submitBtnText = document.getElementById('submit_btn_text');
+    const errorBanner = document.getElementById('form_error');
+    const errorText = document.getElementById('form_error_text');
+    const roleModal = document.getElementById('role_modal');
 
-            confirm.addEventListener('input', () => {
-                if (password.value === confirm.value) {
-                    confirm.classList.remove('border-error');
-                    confirm.classList.add('border-primary');
-                } else {
-                    confirm.classList.remove('border-primary');
-                    confirm.classList.add('border-error');
-                }
-            });
+    function showError(message) {
+        errorText.textContent = message;
+        errorBanner.classList.add('active');
+    }
+
+    function clearError() {
+        errorBanner.classList.remove('active');
+    }
+
+    function setLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        submitBtnText.textContent = isLoading ? 'Creating account...' : 'Create Account';
+        const icon = document.getElementById('submit_btn_icon');
+        if (icon) {
+            icon.style.display = isLoading ? 'none' : 'inline-block';
+        }
+    }
+
+    confirm.addEventListener('input', () => {
+        if (password.value === confirm.value) {
+            confirm.classList.remove('border-error');
+            confirm.classList.add('border-primary');
+        } else {
+            confirm.classList.remove('border-primary');
+            confirm.classList.add('border-error');
+        }
+    });
+
+    // ---- Terms / Privacy modal open + close ----
+    document.getElementById('terms_link').addEventListener('click', () => {
+        document.getElementById('terms_modal').classList.add('active');
+    });
+    document.getElementById('privacy_link').addEventListener('click', () => {
+        document.getElementById('privacy_modal').classList.add('active');
+    });
+    document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            document.getElementById(btn.getAttribute('data-close-modal')).classList.remove('active');
         });
-    </script>
+    });
+    // close legal modals when clicking the dark overlay itself
+    ['terms_modal', 'privacy_modal'].forEach((id) => {
+        const overlay = document.getElementById(id);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('active');
+        });
+    });
+
+    // ---- Signup flow ----
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError();
+
+        const fullName = document.getElementById('full_name').value.trim();
+        const email = document.getElementById('email').value.trim();
+
+        if (password.value !== confirm.value) {
+            showError('Passwords do not match. Please try again.');
+            return;
+        }
+
+        const captchaToken = grecaptcha.getResponse();
+        if (!captchaToken) {
+            showError('Please confirm that you are not a robot.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Step 1: verify the reCAPTCHA token server-side via the Edge Function
+            const { data: captchaResult, error: captchaError } = await supabaseClient.functions.invoke(
+                'verify-recaptcha',
+                { body: { token: captchaToken } }
+            );
+
+            if (captchaError || !captchaResult || captchaResult.success !== true) {
+                showError('reCAPTCHA verification failed. Please make sure the verify-recaptcha function is deployed, then try again.');
+                grecaptcha.reset();
+                setLoading(false);
+                return;
+            }
+
+            // Step 2: create the account
+            const { data, error } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password.value,
+                options: {
+                    data: {
+                        full_name: fullName
+                    }
+                }
+            });
+
+            if (error) {
+                showError(error.message);
+                grecaptcha.reset();
+                setLoading(false);
+                return;
+            }
+
+            // Success — ask whether they're a client or a seller
+            roleModal.classList.add('active');
+            setLoading(false);
+        } catch (err) {
+            showError('Something went wrong. Please try again.');
+            grecaptcha.reset();
+            setLoading(false);
+        }
+    });
+
+    async function chooseRole(role) {
+        try {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (user) {
+                await supabaseClient.from('profiles').update({ role: role }).eq('id', user.id);
+            }
+        } catch (err) {
+            console.error('Could not save role:', err);
+        }
+
+        window.location.href = role === 'client' ? 'cli.html' : 'sel.html';
+    }
+
+    document.getElementById('role_client_btn').addEventListener('click', () => chooseRole('client'));
+    document.getElementById('role_seller_btn').addEventListener('click', () => chooseRole('seller'));
+</script>
 </body></html>
