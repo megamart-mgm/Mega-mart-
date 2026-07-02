@@ -71,6 +71,8 @@
 </div>
 </div>
 
+<div class="mb-lg flex gap-sm overflow-x-auto hide-scrollbar pb-1" id="category_bar"></div>
+
 <section>
 <div class="flex justify-between items-end mb-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">All Products</h2>
@@ -79,7 +81,25 @@
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-md" id="product_grid">
 <p class="col-span-full text-on-surface-variant">Loading products...</p>
 </div>
+
+<div class="flex justify-center items-center gap-md mt-lg" id="pagination_bar">
+<button class="w-10 h-10 rounded-full bg-surface-container-low text-on-surface flex items-center justify-center disabled:opacity-40" id="prev_page_btn">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<span class="text-label-sm text-on-surface-variant" id="page_indicator">Page 1</span>
+<button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center disabled:opacity-40" id="next_page_btn">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
 </section>
+
+<footer class="mt-2xl pt-lg border-t border-outline-variant/30 text-center text-label-sm text-on-surface-variant space-y-2">
+<div class="flex justify-center gap-lg">
+<a class="hover:text-primary hover:underline" href="terms.html">Terms of Service</a>
+<a class="hover:text-primary hover:underline" href="policies.html">Store Policies</a>
+</div>
+<p>© 2026 Mega Mart. All rights reserved.</p>
+</footer>
 
 </main>
 
@@ -104,6 +124,10 @@
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let allProducts = [];
+    let filteredProducts = [];
+    let currentPage = 0;
+    let selectedCategory = 'all';
+    const PAGE_SIZE = 30;
     let pendingWhatsapp = null;
 
     function formatPrice(p) {
@@ -114,12 +138,66 @@
         return `₦${Number(p.price).toLocaleString()}`;
     }
 
-    function renderProducts(products) {
+    function renderCategoryBar() {
+        const cats = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)));
+        const bar = document.getElementById('category_bar');
+        const chips = ['all', ...cats];
+        bar.innerHTML = chips.map(c => `
+            <button class="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border cat-chip ${selectedCategory === c ? 'bg-primary text-on-primary border-primary' : 'bg-white text-on-surface-variant border-outline-variant'}" data-cat="${c}">
+                ${c === 'all' ? 'All' : c}
+            </button>
+        `).join('');
+        bar.querySelectorAll('.cat-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedCategory = btn.getAttribute('data-cat');
+                applyFilters();
+            });
+        });
+    }
+
+    function applyFilters() {
+        const q = document.getElementById('search_input').value.toLowerCase();
+        filteredProducts = allProducts.filter(p => {
+            const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+            const matchesSearch = !q ||
+                p.name.toLowerCase().includes(q) ||
+                (p.category || '').toLowerCase().includes(q) ||
+                (p.store_name || '').toLowerCase().includes(q);
+            return matchesCategory && matchesSearch;
+        });
+        currentPage = 0;
+        renderCategoryBar();
+        renderPage();
+    }
+
+    function renderPage() {
+        document.getElementById('product_count').textContent = `${filteredProducts.length} products`;
+        const start = currentPage * PAGE_SIZE;
+        const pageItems = filteredProducts.slice(start, start + PAGE_SIZE);
+        renderGrid(pageItems);
+
+        const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+        document.getElementById('page_indicator').textContent = `Page ${currentPage + 1} of ${totalPages}`;
+        document.getElementById('prev_page_btn').disabled = currentPage === 0;
+        document.getElementById('next_page_btn').disabled = currentPage >= totalPages - 1;
+        document.getElementById('pagination_bar').style.display = filteredProducts.length > PAGE_SIZE ? 'flex' : 'none';
+
+        pageItems.forEach(p => supabaseClient.rpc('track_impression', { p_product_id: p.id }));
+    }
+
+    document.getElementById('prev_page_btn').addEventListener('click', () => {
+        if (currentPage > 0) { currentPage--; renderPage(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    });
+    document.getElementById('next_page_btn').addEventListener('click', () => {
+        const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
+        if (currentPage < totalPages - 1) { currentPage++; renderPage(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    });
+
+    function renderGrid(products) {
         const grid = document.getElementById('product_grid');
-        document.getElementById('product_count').textContent = `${products.length} products`;
 
         if (products.length === 0) {
-            grid.innerHTML = '<p class="col-span-full text-on-surface-variant">No products yet — check back soon!</p>';
+            grid.innerHTML = '<p class="col-span-full text-on-surface-variant">No products found.</p>';
             return;
         }
 
@@ -130,7 +208,12 @@
                     ${p.plan !== 'free' ? `<span class="absolute top-2 left-2 bg-primary text-on-primary badge-approved">${p.plan.toUpperCase()}</span>` : ''}
                 </div>
                 <h3 class="font-label-md text-on-surface line-clamp-1 mb-xs">${p.name}</h3>
-                <p class="text-label-sm text-on-surface-variant mb-xs">${p.store_name || ''}</p>
+                <div class="flex items-center gap-1 mb-xs">
+                    <div class="w-5 h-5 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        ${p.store_logo_url ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-[12px] text-tertiary">storefront</span>'}
+                    </div>
+                    <p class="text-label-sm text-on-surface-variant truncate">${p.store_name || ''}</p>
+                </div>
                 <div class="flex justify-between items-center mt-auto pt-xs">
                     <span class="font-headline-md text-primary text-base">${formatPrice(p)}</span>
                 </div>
@@ -144,10 +227,6 @@
             btn.addEventListener('click', () => openInterestModal(btn.getAttribute('data-id')));
         });
 
-        // Track impressions for everything rendered
-        products.forEach(p => supabaseClient.rpc('track_impression', { p_product_id: p.id }));
-
-        // Scroll to a specific shared product, if linked
         const params = new URLSearchParams(window.location.search);
         const highlightId = params.get('product');
         if (highlightId) {
@@ -190,6 +269,22 @@
             message: `Interested via Buy Now on "${product.name}"`
         });
 
+        if (product.store_contact_email) {
+            supabaseClient.functions.invoke('notify-seller', {
+                body: {
+                    to: product.store_contact_email,
+                    subject: `Someone's interested in "${product.name}"!`,
+                    html: `
+                        <p>Hi there,</p>
+                        <p><strong>${buyerName || 'A buyer'}</strong> just clicked "Buy Now" on your product <strong>${product.name}</strong> on Mega Mart.</p>
+                        <p>Buyer phone: ${buyerPhone || 'Not provided'}</p>
+                        <p>They should be reaching out to you on WhatsApp shortly — keep an eye out!</p>
+                        <p>— Mega Mart</p>
+                    `
+                }
+            }).catch(() => { /* don't block the buyer flow if email fails */ });
+        }
+
         const whatsappNumber = (product.whatsapp_link || product.store_whatsapp || '').replace(/[^0-9]/g, '');
         const message = encodeURIComponent(`Hi! I saw "${product.name}" on Mega Mart and I'm interested.`);
         const url = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${message}` : `https://wa.me/?text=${message}`;
@@ -199,15 +294,7 @@
         window.open(url, '_blank');
     });
 
-    document.getElementById('search_input').addEventListener('input', (e) => {
-        const q = e.target.value.toLowerCase();
-        const filtered = allProducts.filter(p =>
-            p.name.toLowerCase().includes(q) ||
-            (p.category || '').toLowerCase().includes(q) ||
-            (p.store_name || '').toLowerCase().includes(q)
-        );
-        renderProducts(filtered);
-    });
+    document.getElementById('search_input').addEventListener('input', applyFilters);
 
     async function loadAnnouncement() {
         const { data } = await supabaseClient
@@ -239,7 +326,7 @@
         const rank = { gold: 3, pro: 2, free: 1 };
         allProducts = (data || []).sort((a, b) => (rank[b.plan] || 1) - (rank[a.plan] || 1) || new Date(b.created_at) - new Date(a.created_at));
 
-        renderProducts(allProducts);
+        applyFilters();
     }
 
     loadAnnouncement();
