@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Add Product | Mega Mart</title>
+<meta content="List a new product on your Mega Mart store." name="description"/>
+<meta content="sell online, list product, Mega Mart seller" name="keywords"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: {
+          "colors": {
+            "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+            "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+            "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+            "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a", "error-container": "#ffdad6",
+            "on-error-container": "#93000a", "tertiary": "#595c5e"
+          },
+          "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          "spacing": { "xl": "32px", "gutter": "16px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px" },
+          "fontFamily": { "headline-lg-mobile": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"], "body-md": ["Inter"], "label-sm": ["Inter"] },
+          "fontSize": {
+            "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+            "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+            "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
+          }
+        }}
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .input-focus:focus { outline: none; border-color: #006b2c; box-shadow: 0 0 0 3px rgba(0,107,44,0.15); }
+        .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
+        .img-slot { aspect-ratio: 1; border: 2px dashed #bdcaba; border-radius: 10px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; cursor: pointer; background: #eff4ff; }
+        .img-slot img { width: 100%; height: 100%; object-fit: cover; }
+        .img-remove { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: white; border-radius: 999px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        #form_error { display: none; }
+        #form_error.active { display: block; }
+        #save_toast { display: none; }
+        #save_toast.active { display: flex; }
+        .hidden-field { display: none; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
+<a class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95" href="add-product-type.html">arrow_back</a>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary" id="page_title">Add Product</span>
+</header>
+
+<main class="mt-20 px-md max-w-[640px] mx-auto space-y-lg">
+
+<div class="p-md bg-error-container rounded-lg" id="form_error">
+<p class="font-label-md text-label-md text-on-error-container" id="form_error_text"></p>
+</div>
+
+<!-- Images -->
+<section class="section-card p-lg space-y-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Product Images</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Upload up to 5 images. Images only — video files are not accepted.</p>
+</div>
+<div class="grid grid-cols-3 gap-sm" id="image_grid"></div>
+<input accept="image/*" class="hidden" id="image_input" multiple="" type="file"/>
+</section>
+
+<!-- Core details -->
+<section class="section-card p-lg space-y-md">
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="product_name">Product Name</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="product_name" placeholder="e.g. Wealth Building Ebook" type="text"/>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="product_description">Description</label>
+<textarea class="w-full px-4 py-sm bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="product_description" placeholder="Describe what you're offering..." rows="4"></textarea>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="product_category">Category</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="product_category" placeholder="e.g. Ebooks, Fashion, Coaching" type="text"/>
+</div>
+</section>
+
+<!-- Simple price (digital/physical/others) -->
+<section class="section-card p-lg space-y-md" id="simple_price_section">
+<h2 class="font-headline-md text-headline-md text-on-surface">Price</h2>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="product_price">Price (₦)</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="product_price" min="0" placeholder="0.00" step="0.01" type="number"/>
+</div>
+</section>
+
+<!-- Physical-only fields -->
+<section class="section-card p-lg space-y-md hidden-field" id="physical_section">
+<h2 class="font-headline-md text-headline-md text-on-surface">Physical Product Details</h2>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="product_color">Color</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="product_color" placeholder="e.g. Red, Black, Multi-color" type="text"/>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="product_stock">Stock Quantity</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="product_stock" min="0" placeholder="e.g. 20" type="number"/>
+</div>
+</section>
+
+<!-- Service-only fields: 3 pricing tiers -->
+<section class="section-card p-lg space-y-md hidden-field" id="service_section">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Service Pricing (3 tiers)</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Set 3 price options and explain how each differs.</p>
+</div>
+<div class="space-y-md" id="tiers_container">
+<div class="p-md bg-surface-container-low rounded-lg space-y-xs">
+<p class="font-label-md text-label-md text-on-surface font-bold">Tier 1</p>
+<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md mb-xs" data-tier="0" data-field="name" placeholder="Tier name e.g. Basic" type="text"/>
+<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md mb-xs" data-tier="0" data-field="price" placeholder="Price (₦)" type="number"/>
+<textarea class="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" data-tier="0" data-field="description" placeholder="What's included / how it differs" rows="2"></textarea>
+</div>
+<div class="p-md bg-surface-container-low rounded-lg space-y-xs">
+<p class="font-label-md text-label-md text-on-surface font-bold">Tier 2</p>
+<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md mb-xs" data-tier="1" data-field="name" placeholder="Tier name e.g. Standard" type="text"/>
+<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md mb-xs" data-tier="1" data-field="price" placeholder="Price (₦)" type="number"/>
+<textarea class="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" data-tier="1" data-field="description" placeholder="What's included / how it differs" rows="2"></textarea>
+</div>
+<div class="p-md bg-surface-container-low rounded-lg space-y-xs">
+<p class="font-label-md text-label-md text-on-surface font-bold">Tier 3</p>
+<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md mb-xs" data-tier="2" data-field="name" placeholder="Tier name e.g. Premium" type="text"/>
+<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md mb-xs" data-tier="2" data-field="price" placeholder="Price (₦)" type="number"/>
+<textarea class="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" data-tier="2" data-field="description" placeholder="What's included / how it differs" rows="2"></textarea>
+</div>
+</div>
+</section>
+
+<!-- Delivery + WhatsApp -->
+<section class="section-card p-lg space-y-md">
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="delivery_timeline">Delivery / Turnaround Timeline</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="delivery_timeline" placeholder="e.g. Instant download, 2-3 business days" type="text"/>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="whatsapp_link">WhatsApp Number (buyers will contact you here)</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="whatsapp_link" placeholder="+234..." type="tel"/>
+</div>
+</section>
+
+<button class="w-full h-[52px] bg-primary text-on-primary font-headline-md text-headline-md rounded-lg shadow-sm hover:brightness-95 active:scale-[0.98] transition-all disabled:opacity-60" id="submit_btn" type="button">
+            List Product
+        </button>
+
+</main>
+
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-50" id="save_toast">
+<span class="material-symbols-outlined text-[#7ffc97]">check_circle</span>
+<span class="font-label-md text-label-md" id="save_toast_text">Submitted for review!</span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const productType = urlParams.get('type') || 'digital';
+
+    const TYPE_LABELS = {
+        digital: 'Digital Product', physical: 'Physical Product', service: 'Service',
+        subscription: 'Subscription', ticket_masterclass: 'Ticket & Masterclass',
+        bookings: 'Bookings', course: 'Course', bundle: 'Bundle',
+        membership_course: 'Membership Course', stream: 'Stream', flexible_subscription: 'Flexible Subscription'
+    };
+    document.getElementById('page_title').textContent = 'Add ' + (TYPE_LABELS[productType] || 'Product');
+
+    if (productType === 'physical') {
+        document.getElementById('physical_section').classList.remove('hidden-field');
+    }
+    if (productType === 'service') {
+        document.getElementById('service_section').classList.remove('hidden-field');
+        document.getElementById('simple_price_section').classList.add('hidden-field');
+    }
+
+    let currentUser = null;
+    let store = null;
+    const images = [null, null, null, null, null]; // { file, previewUrl } or null
+
+    function showError(msg) {
+        document.getElementById('form_error_text').textContent = msg;
+        document.getElementById('form_error').classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function clearError() {
+        document.getElementById('form_error').classList.remove('active');
+    }
+
+    function renderImageGrid() {
+        const grid = document.getElementById('image_grid');
+        grid.innerHTML = images.map((img, i) => {
+            if (img) {
+                return `<div class="img-slot"><img src="${img.previewUrl}" /><span class="img-remove" data-remove="${i}">✕</span></div>`;
+            }
+            return `<div class="img-slot" data-add="${i}"><span class="material-symbols-outlined text-tertiary">add_a_photo</span></div>`;
+        }).join('');
+
+        grid.querySelectorAll('[data-add]').forEach(el => {
+            el.addEventListener('click', () => {
+                document.getElementById('image_input').dataset.slot = el.getAttribute('data-add');
+                document.getElementById('image_input').click();
+            });
+        });
+        grid.querySelectorAll('[data-remove]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                images[parseInt(el.getAttribute('data-remove'))] = null;
+                renderImageGrid();
+            });
+        });
+    }
+
+    document.getElementById('image_input').addEventListener('change', (e) => {
+        const slot = parseInt(e.target.dataset.slot || '0');
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showError('Only image files are allowed — videos are not accepted.');
+            e.target.value = '';
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            showError('Each image must be under 5MB.');
+            e.target.value = '';
+            return;
+        }
+
+        clearError();
+        images[slot] = { file, previewUrl: URL.createObjectURL(file) };
+        renderImageGrid();
+        e.target.value = '';
+    });
+
+    renderImageGrid();
+
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { window.location.href = 'signup.html'; return; }
+        currentUser = user;
+
+        const { data: storeData, error } = await supabaseClient
+            .from('stores')
+            .select('*')
+            .eq('seller_id', user.id)
+            .maybeSingle();
+
+        if (error || !storeData) {
+            showError('Set up your store in Store Settings before adding products.');
+            document.getElementById('submit_btn').disabled = true;
+            return;
+        }
+        store = storeData;
+        if (store.whatsapp_number) {
+            document.getElementById('whatsapp_link').value = store.whatsapp_number;
+        }
+    }
+
+    async function uploadImages() {
+        const uploaded = [];
+        for (const img of images) {
+            if (!img) continue;
+            const ext = img.file.name.split('.').pop();
+            const path = `${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+            const { error } = await supabaseClient.storage.from('product-images').upload(path, img.file);
+            if (error) throw new Error('Image upload failed: ' + error.message);
+            const { data: publicUrlData } = supabaseClient.storage.from('product-images').getPublicUrl(path);
+            uploaded.push(publicUrlData.publicUrl);
+        }
+        return uploaded;
+    }
+
+    document.getElementById('submit_btn').addEventListener('click', async () => {
+        clearError();
+
+        const name = document.getElementById('product_name').value.trim();
+        const description = document.getElementById('product_description').value.trim();
+        const category = document.getElementById('product_category').value.trim();
+        const deliveryTimeline = document.getElementById('delivery_timeline').value.trim();
+        const whatsappLink = document.getElementById('whatsapp_link').value.trim();
+        const imageCount = images.filter(Boolean).length;
+
+        if (!name) { showError('Please enter a product name.'); return; }
+        if (imageCount === 0) { showError('Please upload at least 1 image.'); return; }
+        if (!whatsappLink) { showError('Please add a WhatsApp number so buyers can reach you.'); return; }
+
+        let price = 0;
+        let pricingTiers = null;
+
+        if (productType === 'service') {
+            pricingTiers = [0, 1, 2].map(i => ({
+                name: document.querySelector(`[data-tier="${i}"][data-field="name"]`).value.trim(),
+                price: parseFloat(document.querySelector(`[data-tier="${i}"][data-field="price"]`).value) || 0,
+                description: document.querySelector(`[data-tier="${i}"][data-field="description"]`).value.trim()
+            }));
+            if (pricingTiers.some(t => !t.name || !t.price)) {
+                showError('Please fill in all 3 service pricing tiers.');
+                return;
+            }
+            price = Math.min(...pricingTiers.map(t => t.price));
+        } else {
+            price = parseFloat(document.getElementById('product_price').value);
+            if (!price || price <= 0) { showError('Please enter a valid price.'); return; }
+        }
+
+        const submitBtn = document.getElementById('submit_btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading images...';
+
+        try {
+            const imageUrls = await uploadImages();
+
+            submitBtn.textContent = 'Listing product...';
+
+            const payload = {
+                store_id: store.id,
+                seller_id: currentUser.id,
+                name,
+                description,
+                category,
+                price,
+                image_urls: imageUrls,
+                product_type: productType,
+                delivery_timeline: deliveryTimeline,
+                whatsapp_link: whatsappLink,
+                status: 'active'
+            };
+
+            if (productType === 'physical') {
+                payload.color = document.getElementById('product_color').value.trim();
+                const stock = document.getElementById('product_stock').value;
+                payload.stock_quantity = stock ? parseInt(stock) : null;
+            }
+
+            if (productType === 'service') {
+                payload.pricing_tiers = pricingTiers;
+            }
+
+            const { error } = await supabaseClient.from('products').insert(payload);
+
+            if (error) {
+                if (error.message.includes('PRODUCT_LIMIT_REACHED')) {
+                    showError("You've reached your plan's product limit. Please upgrade to list more products.");
+                    setTimeout(() => { window.location.href = 'upgrade-plan.html'; }, 2000);
+                } else {
+                    showError('Could not list product: ' + error.message);
+                }
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'List Product';
+                return;
+            }
+
+            document.getElementById('save_toast_text').textContent = "Submitted! We'll review it and notify you once it's live.";
+            document.getElementById('save_toast').classList.add('active');
+            setTimeout(() => { window.location.href = 'sel.html'; }, 1800);
+
+        } catch (err) {
+            showError(err.message || 'Something went wrong.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'List Product';
+        }
+    });
+
+    init();
+</script>
+</body></html>
