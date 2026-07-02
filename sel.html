@@ -120,6 +120,13 @@
 <p class="font-label-md text-label-md text-on-error-container" id="error_text"></p>
 </div>
 
+<div class="hidden space-y-sm" id="notifications_wrap"></div>
+
+<div class="hidden p-md bg-primary-container/10 border border-primary/20 rounded-xl" id="dashboard_announcement">
+<p class="font-label-md text-label-md text-on-surface font-bold" id="dashboard_announcement_title"></p>
+<p class="text-label-sm text-on-surface-variant" id="dashboard_announcement_body"></p>
+</div>
+
 <div class="flex flex-col gap-md">
 <div class="flex justify-between items-start">
 <div>
@@ -283,12 +290,53 @@
 
     let store = null;
 
+    async function loadNotifications(userId) {
+        const { data } = await supabaseClient
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_read', false)
+            .order('created_at', { ascending: false });
+
+        if (data && data.length > 0) {
+            const wrap = document.getElementById('notifications_wrap');
+            wrap.classList.remove('hidden');
+            wrap.innerHTML = data.map(n => `
+                <div class="p-md bg-primary-container/10 border border-primary/20 rounded-xl flex justify-between items-start gap-sm">
+                    <p class="font-label-md text-label-md text-on-surface">${n.message}</p>
+                    <button class="text-on-surface-variant material-symbols-outlined text-base dismiss-notif" data-id="${n.id}">close</button>
+                </div>
+            `).join('');
+            wrap.querySelectorAll('.dismiss-notif').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', btn.getAttribute('data-id'));
+                    btn.closest('div').remove();
+                });
+            });
+        }
+
+        const { data: ann } = await supabaseClient
+            .from('announcements')
+            .select('*')
+            .eq('audience', 'dashboard')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1);
+        if (ann && ann.length > 0) {
+            document.getElementById('dashboard_announcement_title').textContent = ann[0].title;
+            document.getElementById('dashboard_announcement_body').textContent = ann[0].body;
+            document.getElementById('dashboard_announcement').classList.remove('hidden');
+        }
+    }
+
     async function loadDashboard() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
             window.location.href = 'signup.html';
             return;
         }
+
+        loadNotifications(user.id);
 
         // Avatar initials
         const name = (user.user_metadata && user.user_metadata.full_name) || user.email || 'S';
@@ -386,7 +434,7 @@
         } else {
             productsList.innerHTML = products.map(p => {
                 const s = statsMap[p.id] || { impressions: 0, clicks: 0 };
-                const shareUrl = `${window.location.origin}/product.html?id=${p.id}`;
+                const shareUrl = `${window.location.origin}/store.html?product=${p.id}`;
                 return `
                 <div class="flex items-center justify-between p-sm hover:bg-surface-container-low rounded-lg transition-colors gap-sm">
                     <div class="flex items-center gap-md min-w-0">
@@ -396,6 +444,7 @@
                         <div class="min-w-0">
                             <p class="font-label-md text-on-surface truncate">${p.name}</p>
                             <p class="text-label-sm text-on-surface-variant">₦${Number(p.price).toLocaleString()} · ${s.impressions} views · ${s.clicks} clicks</p>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.approval_status === 'approved' ? 'bg-primary-container/20 text-primary' : p.approval_status === 'rejected' ? 'bg-error-container text-on-error-container' : 'bg-surface-container text-on-surface-variant'}">${p.approval_status === 'approved' ? 'LIVE' : p.approval_status === 'rejected' ? 'REJECTED' : 'PENDING REVIEW'}</span>
                         </div>
                     </div>
                     <button class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high flex-shrink-0 share-btn" data-url="${shareUrl}" data-name="${p.name}">share</button>
