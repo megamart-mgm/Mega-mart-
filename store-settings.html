@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Store Settings | Mega Mart</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#3e4a3d",
+                    "surface-container": "#e5eeff",
+                    "on-surface": "#0b1c30",
+                    "surface-container-low": "#eff4ff",
+                    "primary-container": "#00873a",
+                    "on-primary": "#ffffff",
+                    "on-primary-container": "#f7fff2",
+                    "surface-variant": "#d3e4fe",
+                    "primary": "#006b2c",
+                    "surface": "#f8f9ff",
+                    "surface-bright": "#f8f9ff",
+                    "outline": "#6e7b6c",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "background": "#f8f9ff",
+                    "outline-variant": "#bdcaba",
+                    "surface-container-high": "#dce9ff",
+                    "error": "#ba1a1a",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-background": "#0b1c30",
+                    "error-container": "#ffdad6",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+            "spacing": { "xl": "32px", "gutter": "16px", "container-max": "1280px", "2xl": "48px", "base": "4px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px" },
+            "fontFamily": { "label-sm": ["Inter"], "body-lg": ["Inter"], "headline-lg": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"], "headline-lg-mobile": ["Inter"], "body-md": ["Inter"] },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .input-focus:focus { outline: none; border-color: #006b2c; box-shadow: 0 0 0 3px rgba(0, 107, 44, 0.15); }
+        .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
+
+        /* Toggle switch */
+        .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #d3e4fe; transition: .2s; border-radius: 999px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+        .toggle input:checked + .toggle-slider { background-color: #006b2c; }
+        .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+        #save_toast { display: none; }
+        #save_toast.active { display: flex; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
+<a class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95" href="sel.html">arrow_back</a>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Store Settings</span>
+</header>
+
+<main class="mt-20 px-md max-w-[720px] mx-auto space-y-lg">
+
+<div id="load_error" class="hidden p-md bg-error-container rounded-lg">
+<p class="font-label-md text-label-md text-on-error-container" id="load_error_text"></p>
+</div>
+
+<!-- Store Profile Settings -->
+<section class="section-card p-lg space-y-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Store Profile Settings</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Update your public profile with relevant and meaningful information.</p>
+</div>
+
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Store Logo/Image</label>
+<div class="flex items-center gap-md">
+<div class="w-16 h-16 rounded-xl bg-surface-container-high overflow-hidden flex items-center justify-center" id="logo_preview">
+<span class="material-symbols-outlined text-tertiary">storefront</span>
+</div>
+<input accept="image/*" class="text-label-md" id="logo_input" type="file"/>
+</div>
+</div>
+
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="store_name">Store Name</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="store_name" placeholder="e.g. Wealth Vault" type="text"/>
+</div>
+
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="store_username">Store Username</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="store_username" placeholder="e.g. wealthvault" type="text"/>
+</div>
+
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Store URL</label>
+<p class="font-body-md text-body-md text-primary break-all" id="store_url_preview">—</p>
+</div>
+
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="contact_email">Email Address</label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="contact_email" placeholder="name@example.com" type="email"/>
+</div>
+
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="store_description">Store Description</label>
+<textarea class="w-full px-4 py-sm bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="store_description" placeholder="Tell shoppers about your store..." rows="3"></textarea>
+</div>
+
+<div class="pt-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-sm">Social Media Details (Visible on Store)</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
+<input class="h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="instagram_username" placeholder="Instagram username" type="text"/>
+<input class="h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="twitter_username" placeholder="Twitter/X username" type="text"/>
+<input class="h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="facebook_url" placeholder="Facebook URL" type="text"/>
+<input class="h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="youtube_username" placeholder="YouTube username" type="text"/>
+<input class="h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="tiktok_username" placeholder="TikTok handle" type="text"/>
+<input class="h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="linkedin_url" placeholder="LinkedIn profile URL" type="text"/>
+</div>
+</div>
+
+<div class="pt-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-sm">Mega Mart Support Details</h3>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="support_phone">Phone number <span class="font-normal normal-case text-tertiary">(when Mega Mart needs to reach you — not public)</span></label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="support_phone" placeholder="+234..." type="tel"/>
+</div>
+<div class="space-y-xs mt-sm">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="whatsapp_number">WhatsApp Number <span class="font-normal normal-case text-tertiary">(shown to interested buyers)</span></label>
+<input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="whatsapp_number" placeholder="+234..." type="tel"/>
+</div>
+</div>
+</section>
+
+<!-- Checkout Settings -->
+<section class="section-card p-lg space-y-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Miscellaneous Store Settings</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Modify checkout experience for your customers.</p>
+</div>
+
+<div class="space-y-md">
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Collect customer's mobile number on checkout</span>
+<span class="toggle"><input id="collect_mobile_number" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Collect customer's Address City on checkout</span>
+<span class="toggle"><input id="collect_city" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Collect customer's Post code on checkout</span>
+<span class="toggle"><input id="collect_postcode" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Show checkout form immediately after 'Buy' click</span>
+<span class="toggle"><input id="instant_checkout" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="buy_button_text">Buy button text</label>
+<input class="w-full h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="buy_button_text" placeholder="Buy Now" type="text"/>
+</div>
+</div>
+
+<div class="pt-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mb-sm">Transaction Charge</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-sm">Choose who pays the Mega Mart transaction charge</p>
+<div class="flex gap-md">
+<label class="flex items-center gap-xs cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary" id="charge_customer" name="transaction_charge_payer" type="radio" value="customer"/>
+<span class="font-label-md text-label-md">Customer</span>
+</label>
+<label class="flex items-center gap-xs cursor-pointer">
+<input class="w-4 h-4 text-primary" id="charge_merchant" name="transaction_charge_payer" type="radio" value="merchant"/>
+<span class="font-label-md text-label-md">Me (Merchant)</span>
+</label>
+</div>
+</div>
+
+<div class="pt-sm space-y-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Cross-sell Settings</h3>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Enable product cross-sell on product page</span>
+<span class="toggle"><input id="cross_sell_enabled" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="cross_sell_basis">Recommend based on</label>
+<select class="w-full h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="cross_sell_basis">
+<option value="bought_together">Actual products bought together</option>
+<option value="tags">Product Tags</option>
+</select>
+</div>
+</div>
+
+<div class="pt-sm space-y-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Tax Settings</h3>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Add tax to customer's payment</span>
+<span class="toggle"><input id="tax_enabled" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="tax_percentage">Tax percentage (%)</label>
+<input class="w-full h-11 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="tax_percentage" min="0" step="0.5" type="number" value="0"/>
+</div>
+</div>
+</section>
+
+<!-- Store Design Settings -->
+<section class="section-card p-lg space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Store Design Settings</h2>
+
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Show store categories sidebar</span>
+<span class="toggle"><input id="show_categories_sidebar" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+
+<div class="pt-sm space-y-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Product Rating Settings</h3>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Allow product ratings (after purchase)</span>
+<span class="toggle"><input id="allow_product_ratings" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Show product ratings on store</span>
+<span class="toggle"><input id="show_ratings_on_store" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Show ratings on store home</span>
+<span class="toggle"><input id="show_ratings_on_home" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Show sales count on store home</span>
+<span class="toggle"><input id="show_sales_count" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+</div>
+
+<div class="pt-sm space-y-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Course &amp; Membership Settings</h3>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Enable Course &amp; Membership lecture comments</span>
+<span class="toggle"><input id="enable_course_comments" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+</div>
+
+<div class="pt-sm space-y-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide">Affiliate Network Settings</h3>
+<label class="flex items-center justify-between gap-md cursor-pointer">
+<span class="font-label-md text-label-md text-on-surface">Give every affiliate access to all products with one link</span>
+<span class="toggle"><input id="enable_affiliate_network" type="checkbox"/><span class="toggle-slider"></span></span>
+</label>
+</div>
+</section>
+
+<div class="sticky bottom-4 flex justify-end">
+<button class="bg-primary text-on-primary px-xl py-sm rounded-lg font-bold shadow-lg active:scale-95 transition-all disabled:opacity-60" id="save_btn" type="button">
+                Save Settings
+            </button>
+</div>
+
+</main>
+
+<!-- Save toast -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-inverse-surface text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-50" id="save_toast">
+<span class="material-symbols-outlined text-primary-fixed">check_circle</span>
+<span class="font-label-md text-label-md" id="save_toast_text">Settings saved</span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let existingStoreId = null;
+
+    const fields = [
+        'store_name', 'store_username', 'contact_email', 'store_description',
+        'instagram_username', 'twitter_username', 'facebook_url', 'youtube_username',
+        'tiktok_username', 'linkedin_url', 'support_phone', 'whatsapp_number',
+        'buy_button_text', 'tax_percentage'
+    ];
+    const toggles = [
+        'collect_mobile_number', 'collect_city', 'collect_postcode', 'instant_checkout',
+        'cross_sell_enabled', 'tax_enabled', 'show_categories_sidebar', 'allow_product_ratings',
+        'show_ratings_on_store', 'show_ratings_on_home', 'show_sales_count',
+        'enable_course_comments', 'enable_affiliate_network'
+    ];
+
+    function showLoadError(message) {
+        const box = document.getElementById('load_error');
+        document.getElementById('load_error_text').textContent = message;
+        box.classList.remove('hidden');
+    }
+
+    function updateStoreUrlPreview() {
+        const username = document.getElementById('store_username').value.trim();
+        const preview = document.getElementById('store_url_preview');
+        preview.textContent = username
+            ? `${window.location.origin}/store/${username}`
+            : '—';
+    }
+
+    document.getElementById('store_username').addEventListener('input', updateStoreUrlPreview);
+
+    async function loadStore() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            window.location.href = 'signup.html';
+            return;
+        }
+        currentUser = user;
+
+        const { data, error } = await supabaseClient
+            .from('stores')
+            .select('*')
+            .eq('seller_id', user.id)
+            .maybeSingle();
+
+        if (error) {
+            showLoadError('Could not load your store settings: ' + error.message);
+            return;
+        }
+
+        if (data) {
+            existingStoreId = data.id;
+            fields.forEach((f) => {
+                const el = document.getElementById(f);
+                if (el && data[f] !== null && data[f] !== undefined) el.value = data[f];
+            });
+            toggles.forEach((t) => {
+                const el = document.getElementById(t);
+                if (el && data[t] !== null && data[t] !== undefined) el.checked = data[t];
+            });
+            if (data.transaction_charge_payer === 'merchant') {
+                document.getElementById('charge_merchant').checked = true;
+            } else {
+                document.getElementById('charge_customer').checked = true;
+            }
+            if (data.cross_sell_basis) {
+                document.getElementById('cross_sell_basis').value = data.cross_sell_basis;
+            }
+            if (data.logo_url) {
+                document.getElementById('logo_preview').innerHTML =
+                    `<img src="${data.logo_url}" class="w-full h-full object-cover" />`;
+            }
+        }
+        updateStoreUrlPreview();
+    }
+
+    async function saveStore() {
+        if (!currentUser) return;
+
+        const saveBtn = document.getElementById('save_btn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        const payload = { seller_id: currentUser.id };
+        fields.forEach((f) => {
+            const el = document.getElementById(f);
+            if (el) payload[f] = el.value || null;
+        });
+        toggles.forEach((t) => {
+            const el = document.getElementById(t);
+            if (el) payload[t] = el.checked;
+        });
+        payload.transaction_charge_payer = document.getElementById('charge_merchant').checked ? 'merchant' : 'customer';
+        payload.cross_sell_basis = document.getElementById('cross_sell_basis').value;
+        payload.tax_percentage = parseFloat(payload.tax_percentage) || 0;
+
+        const { error } = await supabaseClient
+            .from('stores')
+            .upsert(payload, { onConflict: 'seller_id' });
+
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Settings';
+
+        if (error) {
+            showLoadError('Could not save settings: ' + error.message);
+            return;
+        }
+
+        const toast = document.getElementById('save_toast');
+        toast.classList.add('active');
+        setTimeout(() => toast.classList.remove('active'), 2500);
+    }
+
+    document.getElementById('save_btn').addEventListener('click', saveStore);
+
+    loadStore();
+</script>
+</body></html>
