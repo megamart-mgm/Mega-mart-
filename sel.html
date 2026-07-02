@@ -253,7 +253,8 @@
     const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const PLAN_LIMITS = { free: 5, pro: 30, gold: 100 };
+    // Pro is now 50 products (was 30) — matches the admin-approved upgrade flow
+    const PLAN_LIMITS = { free: 5, pro: 50, gold: 100 };
 
     function showToast(msg) {
         document.getElementById('toast_text').textContent = msg;
@@ -394,6 +395,8 @@
         document.getElementById('product_limit_bar').style.width = Math.min(100, (count / limit) * 100) + '%';
         if (count >= limit) {
             document.getElementById('upgrade_prompt').classList.remove('hidden');
+        } else {
+            document.getElementById('upgrade_prompt').classList.add('hidden');
         }
 
         // Low stock (physical only)
@@ -427,7 +430,7 @@
         const totalImpressions = Object.values(statsMap).reduce((sum, s) => sum + (s.impressions || 0), 0);
         document.getElementById('stat_total_impressions').textContent = totalImpressions.toLocaleString();
 
-        // Products list with per-product analytics + share button
+        // Products list with per-product analytics + share/edit/delete buttons
         const productsList = document.getElementById('products_list');
         if (products.length === 0) {
             productsList.innerHTML = '<p class="font-body-md text-body-md text-on-surface-variant">You haven\'t listed any products yet.</p>';
@@ -447,7 +450,11 @@
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.approval_status === 'approved' ? 'bg-primary-container/20 text-primary' : p.approval_status === 'rejected' ? 'bg-error-container text-on-error-container' : 'bg-surface-container text-on-surface-variant'}">${p.approval_status === 'approved' ? 'LIVE' : p.approval_status === 'rejected' ? 'REJECTED' : 'PENDING REVIEW'}</span>
                         </div>
                     </div>
-                    <button class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high flex-shrink-0 share-btn" data-url="${shareUrl}" data-name="${p.name}">share</button>
+                    <div class="flex items-center gap-xs flex-shrink-0">
+                        <button class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high share-btn" data-url="${shareUrl}" data-name="${p.name}" title="Share">share</button>
+                        <button class="material-symbols-outlined text-on-surface-variant p-2 rounded-full hover:bg-surface-container-high edit-btn" data-id="${p.id}" title="Edit">edit</button>
+                        <button class="material-symbols-outlined text-error p-2 rounded-full hover:bg-error-container delete-btn" data-id="${p.id}" data-name="${p.name}" title="Delete">delete</button>
+                    </div>
                 </div>`;
             }).join('');
 
@@ -463,6 +470,26 @@
                         await navigator.clipboard.writeText(url);
                         showToast('Product link copied!');
                     }
+                });
+            });
+
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    window.location.href = `edit-product.html?id=${btn.getAttribute('data-id')}`;
+                });
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.getAttribute('data-id');
+                    const name = btn.getAttribute('data-name');
+                    if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
+
+                    const { error } = await supabaseClient.from('products').delete().eq('id', id);
+                    if (error) { showError('Could not delete product: ' + error.message); return; }
+
+                    showToast('Product deleted.');
+                    loadDashboard();
                 });
             });
         }
