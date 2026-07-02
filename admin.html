@@ -91,12 +91,21 @@
 <div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Pending Products</p><p class="text-2xl font-bold text-primary" id="stat_pending">—</p></div>
 <div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Approved Products</p><p class="text-2xl font-bold text-primary" id="stat_approved">—</p></div>
 <div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Completed Orders</p><p class="text-2xl font-bold text-primary" id="stat_orders">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Pending Upgrades</p><p class="text-2xl font-bold text-primary" id="stat_pending_upgrades">—</p></div>
 </div>
 
 <!-- Pending approvals -->
 <section class="section-card p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Products Awaiting Approval</h2>
 <div class="space-y-sm" id="pending_list">
+<p class="text-on-surface-variant">Loading...</p>
+</div>
+</section>
+
+<!-- Pending plan upgrades -->
+<section class="section-card p-lg space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Pending Plan Upgrades</h2>
+<div class="space-y-sm" id="upgrades_list">
 <p class="text-on-surface-variant">Loading...</p>
 </div>
 </section>
@@ -178,6 +187,7 @@
         show('admin_content');
         loadStats();
         loadPending();
+        loadUpgrades();
     }
 
     document.getElementById('login_btn').addEventListener('click', async () => {
@@ -256,6 +266,53 @@
         document.getElementById('stat_pending').textContent = data.pending_products;
         document.getElementById('stat_approved').textContent = data.approved_products;
         document.getElementById('stat_orders').textContent = data.total_orders;
+        document.getElementById('stat_pending_upgrades').textContent = data.pending_upgrades;
+    }
+
+    async function loadUpgrades() {
+        const { data, error } = await supabaseClient
+            .from('plan_upgrade_requests')
+            .select('*, stores(store_name), profiles(email)')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true });
+
+        const list = document.getElementById('upgrades_list');
+        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">No upgrades waiting for confirmation.</p>'; return; }
+
+        list.innerHTML = data.map(r => `
+            <div class="flex items-center justify-between gap-md p-sm border border-outline-variant/30 rounded-lg">
+                <div class="min-w-0">
+                    <p class="font-label-md text-on-surface truncate">${r.stores ? r.stores.store_name : 'Unknown store'} — ${r.requested_plan.toUpperCase()}</p>
+                    <p class="text-label-sm text-on-surface-variant">${r.profiles ? r.profiles.email : ''} · ₦${Number(r.amount).toLocaleString()} · ref: ${r.paystack_reference}</p>
+                </div>
+                <div class="flex gap-xs flex-shrink-0">
+                    <button class="bg-primary text-on-primary px-md py-1 rounded-lg text-sm font-bold grant-btn" data-id="${r.id}">Grant Access</button>
+                    <button class="bg-error-container text-on-error-container px-md py-1 rounded-lg text-sm font-bold reject-upgrade-btn" data-id="${r.id}">Reject</button>
+                </div>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.grant-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const { error } = await supabaseClient.rpc('admin_grant_plan_upgrade', { p_request_id: btn.getAttribute('data-id') });
+                if (error) { showError(error.message); return; }
+                showToast('Granted — seller notified.');
+                loadUpgrades();
+                loadStats();
+            });
+        });
+        list.querySelectorAll('.reject-upgrade-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reason = prompt('Reason for rejection (shown to the seller, optional):');
+                if (reason === null) return;
+                const { error } = await supabaseClient.rpc('admin_reject_plan_upgrade', { p_request_id: btn.getAttribute('data-id'), p_reason: reason || null });
+                if (error) { showError(error.message); return; }
+                showToast('Rejected — seller notified.');
+                loadUpgrades();
+                loadStats();
+            });
+        });
     }
 
     document.getElementById('post_ann_btn').addEventListener('click', async () => {
