@@ -45,6 +45,11 @@
 <main class="mt-20 px-md max-w-[720px] mx-auto space-y-lg">
 <div class="hidden p-md bg-error-container rounded-lg" id="form_error"><p class="font-label-md text-label-md text-on-error-container" id="form_error_text"></p></div>
 
+<div class="hidden p-md bg-primary-container/10 border border-primary/20 rounded-xl" id="pending_banner">
+<p class="font-label-md text-label-md text-on-surface font-bold">Upgrade pending confirmation</p>
+<p class="text-label-sm text-on-surface-variant">We've received your payment and it's awaiting admin confirmation. You'll be notified once it's approved — usually within a few hours.</p>
+</div>
+
 <p class="font-body-md text-body-md text-on-surface-variant" id="current_plan_text">Loading your current plan...</p>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
@@ -61,7 +66,7 @@
 <h2 class="font-headline-md text-headline-md text-on-surface">Pro</h2>
 <p class="text-3xl font-bold text-primary" id="pro_price">₦10,000</p>
 <p class="text-label-sm text-on-surface-variant" id="pro_price_note">First 3 months, then ₦4,000/month</p>
-<p class="text-label-sm text-on-surface-variant mt-xs">Up to 30 products</p>
+<p class="text-label-sm text-on-surface-variant mt-xs">Up to 50 products</p>
 <button class="w-full h-11 mt-md bg-primary text-on-primary rounded-lg font-bold active:scale-95 transition-all" id="pay_pro_btn">Upgrade to Pro</button>
 </div>
 
@@ -74,11 +79,11 @@
 
 </div>
 
-<p class="text-label-sm text-on-surface-variant text-center">Payments are processed securely by Paystack.</p>
+<p class="text-label-sm text-on-surface-variant text-center">Payments are processed securely by Paystack. Upgrades are confirmed by our team shortly after payment.</p>
 </main>
 
 <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-50" id="toast">
-<span class="material-symbols-outlined text-[#7ffc97]">check_circle</span><span class="font-label-md text-label-md" id="toast_text">Payment successful!</span>
+<span class="material-symbols-outlined text-[#7ffc97]">check_circle</span><span class="font-label-md text-label-md" id="toast_text">Payment received!</span>
 </div>
 
 <script>
@@ -101,6 +106,22 @@
         const t = document.getElementById('toast');
         t.classList.add('active');
         setTimeout(() => t.classList.remove('active'), 3000);
+    }
+
+    async function checkPendingUpgrade() {
+        const { data } = await supabaseClient
+            .from('plan_upgrade_requests')
+            .select('*')
+            .eq('seller_id', currentUser.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (data && data.length > 0) {
+            document.getElementById('pending_banner').classList.remove('hidden');
+            document.getElementById('pay_pro_btn').disabled = true;
+            document.getElementById('pay_pro_btn').textContent = 'Upgrade pending confirmation';
+        }
     }
 
     async function init() {
@@ -127,6 +148,8 @@
             document.getElementById('pay_pro_btn').disabled = true;
             document.getElementById('pay_pro_btn').textContent = "You're already on Gold";
         }
+
+        await checkPendingUpgrade();
     }
 
     document.getElementById('gold_btn').addEventListener('click', () => {
@@ -149,45 +172,37 @@
             ref: 'MEGAMART-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
             metadata: { seller_id: currentUser.id, plan: 'pro', billing_cycle: billingCycle },
             callback: function (response) {
-                handlePaymentSuccess(response.reference, amountNaira, billingCycle, isFirstPayment);
+                handlePaymentSuccess(response.reference, amountNaira, billingCycle);
             },
             onClose: function () {}
         });
         handler.openIframe();
     });
 
-    async function handlePaymentSuccess(reference, amountNaira, billingCycle, isFirstPayment) {
-        // NOTE: this trusts Paystack's client-side callback. For production-grade security,
-        // this should be verified server-side (Edge Function calling Paystack's /transaction/verify
-        // with the SECRET key) before granting the upgrade — same pattern as verify-recaptcha.
-        const periodMonths = isFirstPayment ? 3 : 1;
-        const periodStart = new Date();
-        const periodEnd = new Date();
-        periodEnd.setMonth(periodEnd.getMonth() + periodMonths);
-
-        await supabaseClient.from('subscriptions').insert({
+    async function handlePaymentSuccess(reference, amountNaira, billingCycle) {
+        // Payment no longer auto-grants the plan. It creates a pending request
+        // that shows up on the admin Control Room for manual confirmation.
+        // NOTE: for production-grade security, verify the payment server-side
+        // (Edge Function calling Paystack's /transaction/verify with the SECRET
+        // key) before this insert even runs — a client-side callback alone can
+        // be spoofed. Worth adding once you have Edge Functions set up.
+        const { error } = await supabaseClient.from('plan_upgrade_requests').insert({
             seller_id: currentUser.id,
-            plan: 'pro',
+            store_id: store.id,
+            requested_plan: 'pro',
             amount: amountNaira,
             currency: 'NGN',
-            billing_cycle: billingCycle,
             paystack_reference: reference,
-            status: 'success',
-            period_start: periodStart.toISOString(),
-            period_end: periodEnd.toISOString()
+            billing_cycle: billingCycle
         });
 
-        const updatePayload = {
-            plan: 'pro',
-            plan_started_at: periodStart.toISOString(),
-            plan_expires_at: periodEnd.toISOString()
-        };
-        if (isFirstPayment) updatePayload.pro_first_paid_at = periodStart.toISOString();
+        if (error) {
+            showError('Payment went through, but we could not record your request: ' + error.message + '. Please contact support with this reference: ' + reference);
+            return;
+        }
 
-        await supabaseClient.from('stores').update(updatePayload).eq('seller_id', currentUser.id);
-
-        showToast('Payment successful! You are now on the Pro plan.');
-        setTimeout(() => { window.location.href = 'sel.html'; }, 1800);
+        showToast('Payment received! Your upgrade is awaiting confirmation.');
+        setTimeout(() => { window.location.href = 'sel.html'; }, 2200);
     }
 
     init();
