@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mega Mart - Shop Digital Products, Physical Goods & Services in Nigeria</title>
+<meta content="Shop digital products, physical goods, and professional services from verified sellers on Mega Mart. Fast WhatsApp checkout, trusted Nigerian sellers." name="description"/>
+<meta content="online marketplace Nigeria, buy online Nigeria, digital products, sell online, WhatsApp shopping, Mega Mart" name="keywords"/>
+<meta content="Mega Mart" property="og:site_name"/>
+<meta content="Mega Mart - Shop Nigeria's Online Marketplace" property="og:title"/>
+<meta content="Discover digital products, physical goods and services from verified Nigerian sellers." property="og:description"/>
+<meta content="website" property="og:type"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = { darkMode: "class", theme: { extend: {
+        "colors": {
+          "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+          "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+          "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a", "tertiary": "#595c5e",
+          "primary-container": "#00873a", "on-primary-container": "#f7fff2"
+        },
+        "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px", "gutter": "16px", "container-max": "1280px" },
+        "fontFamily": { "headline-lg-mobile": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"], "body-md": ["Inter"], "label-sm": ["Inter"] },
+        "fontSize": {
+          "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+          "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+          "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+          "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
+        }
+      }}}
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .product-card { transition: box-shadow 0.15s ease; }
+        .product-card.highlight { box-shadow: 0 0 0 3px #006b2c; }
+        .badge-approved { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md">
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-md h-16 shadow-sm bg-surface">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary tracking-tight">Mega Mart</h1>
+<div class="flex items-center gap-sm">
+<a class="text-primary text-label-md font-bold hover:underline" href="login.html">Log In</a>
+</div>
+</header>
+
+<main class="pt-20 pb-16 max-w-container-max mx-auto px-md">
+
+<div class="mb-md hidden" id="announcement_banner">
+<div class="bg-primary-container/10 border border-primary/20 rounded-xl p-md flex items-start gap-sm">
+<span class="material-symbols-outlined text-primary">campaign</span>
+<div>
+<p class="font-label-md text-label-md text-on-surface font-bold" id="announcement_title"></p>
+<p class="text-label-sm text-on-surface-variant" id="announcement_body"></p>
+</div>
+</div>
+</div>
+
+<div class="mb-lg">
+<div class="relative group">
+<input class="w-full h-12 bg-surface-container-low border border-outline-variant rounded-xl px-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md" id="search_input" placeholder="Search for products, services and more..." type="text"/>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary">search</span>
+</div>
+</div>
+
+<section>
+<div class="flex justify-between items-end mb-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">All Products</h2>
+<span class="text-label-sm text-on-surface-variant" id="product_count"></span>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-md" id="product_grid">
+<p class="col-span-full text-on-surface-variant">Loading products...</p>
+</div>
+</section>
+
+</main>
+
+<!-- Buyer interest modal -->
+<div class="fixed inset-0 bg-black/50 z-[80] hidden items-center justify-center p-md" id="interest_modal">
+<div class="w-full max-w-[400px] bg-white rounded-xl p-lg space-y-md">
+<h3 class="font-headline-md text-headline-md text-on-surface">Quick info before you chat</h3>
+<p class="text-label-sm text-on-surface-variant" id="interest_product_name"></p>
+<input class="w-full h-11 px-3 border border-[#E2E8F0] rounded-lg" id="interest_name" placeholder="Your name" type="text"/>
+<input class="w-full h-11 px-3 border border-[#E2E8F0] rounded-lg" id="interest_phone" placeholder="Your phone number" type="tel"/>
+<div class="flex gap-sm">
+<button class="flex-1 h-11 bg-surface-container-low rounded-lg font-bold" id="interest_cancel">Cancel</button>
+<button class="flex-1 h-11 bg-primary text-on-primary rounded-lg font-bold" id="interest_continue">Continue to WhatsApp</button>
+</div>
+</div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allProducts = [];
+    let pendingWhatsapp = null;
+
+    function formatPrice(p) {
+        if (p.product_type === 'service' && p.pricing_tiers && p.pricing_tiers.length) {
+            const min = Math.min(...p.pricing_tiers.map(t => t.price));
+            return `From ₦${min.toLocaleString()}`;
+        }
+        return `₦${Number(p.price).toLocaleString()}`;
+    }
+
+    function renderProducts(products) {
+        const grid = document.getElementById('product_grid');
+        document.getElementById('product_count').textContent = `${products.length} products`;
+
+        if (products.length === 0) {
+            grid.innerHTML = '<p class="col-span-full text-on-surface-variant">No products yet — check back soon!</p>';
+            return;
+        }
+
+        grid.innerHTML = products.map(p => `
+            <div class="product-card bg-surface-container-lowest rounded-xl p-sm shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col" id="product-${p.id}">
+                <div class="relative aspect-square rounded-lg overflow-hidden bg-surface-container mb-sm">
+                    ${p.image_urls && p.image_urls[0] ? `<img class="w-full h-full object-cover" src="${p.image_urls[0]}" />` : '<div class="w-full h-full flex items-center justify-center text-on-surface-variant"><span class="material-symbols-outlined">image</span></div>'}
+                    ${p.plan !== 'free' ? `<span class="absolute top-2 left-2 bg-primary text-on-primary badge-approved">${p.plan.toUpperCase()}</span>` : ''}
+                </div>
+                <h3 class="font-label-md text-on-surface line-clamp-1 mb-xs">${p.name}</h3>
+                <p class="text-label-sm text-on-surface-variant mb-xs">${p.store_name || ''}</p>
+                <div class="flex justify-between items-center mt-auto pt-xs">
+                    <span class="font-headline-md text-primary text-base">${formatPrice(p)}</span>
+                </div>
+                <button class="w-full h-10 mt-sm bg-primary text-on-primary rounded-lg text-sm font-bold flex items-center justify-center gap-1 buy-now-btn" data-id="${p.id}">
+                    <span class="material-symbols-outlined text-base">chat</span> Buy Now
+                </button>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('.buy-now-btn').forEach(btn => {
+            btn.addEventListener('click', () => openInterestModal(btn.getAttribute('data-id')));
+        });
+
+        // Track impressions for everything rendered
+        products.forEach(p => supabaseClient.rpc('track_impression', { p_product_id: p.id }));
+
+        // Scroll to a specific shared product, if linked
+        const params = new URLSearchParams(window.location.search);
+        const highlightId = params.get('product');
+        if (highlightId) {
+            const el = document.getElementById('product-' + highlightId);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('highlight');
+            }
+        }
+    }
+
+    function openInterestModal(productId) {
+        const product = allProducts.find(p => p.id === productId);
+        if (!product) return;
+        pendingWhatsapp = product;
+        document.getElementById('interest_product_name').textContent = product.name;
+        document.getElementById('interest_modal').classList.remove('hidden');
+        document.getElementById('interest_modal').classList.add('flex');
+    }
+
+    document.getElementById('interest_cancel').addEventListener('click', () => {
+        document.getElementById('interest_modal').classList.add('hidden');
+        document.getElementById('interest_modal').classList.remove('flex');
+    });
+
+    document.getElementById('interest_continue').addEventListener('click', async () => {
+        const product = pendingWhatsapp;
+        if (!product) return;
+
+        const buyerName = document.getElementById('interest_name').value.trim();
+        const buyerPhone = document.getElementById('interest_phone').value.trim();
+
+        await supabaseClient.rpc('track_click', { p_product_id: product.id });
+
+        await supabaseClient.from('buyer_inquiries').insert({
+            product_id: product.id,
+            store_id: product.store_id,
+            buyer_name: buyerName || 'Anonymous',
+            buyer_phone: buyerPhone || null,
+            message: `Interested via Buy Now on "${product.name}"`
+        });
+
+        const whatsappNumber = (product.whatsapp_link || product.store_whatsapp || '').replace(/[^0-9]/g, '');
+        const message = encodeURIComponent(`Hi! I saw "${product.name}" on Mega Mart and I'm interested.`);
+        const url = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${message}` : `https://wa.me/?text=${message}`;
+
+        document.getElementById('interest_modal').classList.add('hidden');
+        document.getElementById('interest_modal').classList.remove('flex');
+        window.open(url, '_blank');
+    });
+
+    document.getElementById('search_input').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        const filtered = allProducts.filter(p =>
+            p.name.toLowerCase().includes(q) ||
+            (p.category || '').toLowerCase().includes(q) ||
+            (p.store_name || '').toLowerCase().includes(q)
+        );
+        renderProducts(filtered);
+    });
+
+    async function loadAnnouncement() {
+        const { data } = await supabaseClient
+            .from('announcements')
+            .select('*')
+            .eq('audience', 'store')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1);
+        if (data && data.length > 0) {
+            document.getElementById('announcement_title').textContent = data[0].title;
+            document.getElementById('announcement_body').textContent = data[0].body;
+            document.getElementById('announcement_banner').classList.remove('hidden');
+        }
+    }
+
+    async function loadProducts() {
+        const { data, error } = await supabaseClient
+            .from('product_feed')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            document.getElementById('product_grid').innerHTML = `<p class="col-span-full text-error">Could not load products: ${error.message}</p>`;
+            return;
+        }
+
+        // Rank: gold > pro > free, then newest first
+        const rank = { gold: 3, pro: 2, free: 1 };
+        allProducts = (data || []).sort((a, b) => (rank[b.plan] || 1) - (rank[a.plan] || 1) || new Date(b.created_at) - new Date(a.created_at));
+
+        renderProducts(allProducts);
+    }
+
+    loadAnnouncement();
+    loadProducts();
+</script>
+</body></html>
