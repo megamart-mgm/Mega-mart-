@@ -71,12 +71,12 @@
 
 <div id="admin_content">
 
-<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between gap-sm px-md h-16 shadow-sm bg-surface">
-<div class="flex items-center gap-sm">
-<span class="material-symbols-outlined text-primary">admin_panel_settings</span>
-<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Control Room</span>
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between gap-xs px-sm sm:px-md h-16 shadow-sm bg-surface">
+<div class="flex items-center gap-xs sm:gap-sm min-w-0">
+<span class="material-symbols-outlined text-primary flex-shrink-0">admin_panel_settings</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary truncate">Control Room</span>
 </div>
-<button class="text-on-surface-variant font-label-md text-label-md" id="logout_btn" type="button">Sign out</button>
+<button class="text-on-surface-variant font-label-md text-label-md flex-shrink-0 whitespace-nowrap" id="logout_btn" type="button">Sign out</button>
 </header>
 
 <main class="mt-20 px-md max-w-[900px] mx-auto space-y-lg">
@@ -272,7 +272,7 @@
     async function loadUpgrades() {
         const { data, error } = await supabaseClient
             .from('plan_upgrade_requests')
-            .select('*, stores(store_name), profiles(email)')
+            .select('*, stores(store_name), profiles!seller_id(email)')
             .eq('status', 'pending')
             .order('created_at', { ascending: true });
 
