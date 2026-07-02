@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Control Room</title>
+<meta content="noindex, nofollow" name="robots"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = { darkMode: "class", theme: { extend: {
+        "colors": {
+          "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+          "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+          "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a", "error-container": "#ffdad6",
+          "on-error-container": "#93000a", "tertiary": "#595c5e", "primary-container": "#00873a"
+        },
+        "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px" },
+        "fontFamily": { "headline-lg-mobile": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"], "body-md": ["Inter"] },
+        "fontSize": {
+          "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+          "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+          "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+        }
+      }}}
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
+        #toast { display: none; } #toast.active { display: flex; }
+        #access_denied { display: none; }
+        #access_denied.active { display: flex; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+
+<div class="fixed inset-0 bg-background z-[100] flex-col items-center justify-center gap-md" id="access_denied">
+<span class="material-symbols-outlined text-6xl text-tertiary">lock</span>
+<p class="font-body-md text-on-surface-variant">Page not found.</p>
+</div>
+
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
+<span class="material-symbols-outlined text-primary">admin_panel_settings</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Control Room</span>
+</header>
+
+<main class="mt-20 px-md max-w-[900px] mx-auto space-y-lg">
+
+<div class="hidden p-md bg-error-container rounded-lg" id="form_error"><p class="font-label-md text-label-md text-on-error-container" id="form_error_text"></p></div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-md">
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Total Users</p><p class="text-2xl font-bold text-primary" id="stat_users">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Sellers</p><p class="text-2xl font-bold text-primary" id="stat_sellers">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Buyers</p><p class="text-2xl font-bold text-primary" id="stat_buyers">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Pending Products</p><p class="text-2xl font-bold text-primary" id="stat_pending">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Approved Products</p><p class="text-2xl font-bold text-primary" id="stat_approved">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Completed Orders</p><p class="text-2xl font-bold text-primary" id="stat_orders">—</p></div>
+</div>
+
+<!-- Pending approvals -->
+<section class="section-card p-lg space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Products Awaiting Approval</h2>
+<div class="space-y-sm" id="pending_list">
+<p class="text-on-surface-variant">Loading...</p>
+</div>
+</section>
+
+<!-- Announcement composer -->
+<section class="section-card p-lg space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Post an Announcement</h2>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="ann_title">Title</label>
+<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg" id="ann_title" type="text"/>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="ann_body">Message</label>
+<textarea class="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-lg" id="ann_body" rows="3"></textarea>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Audience</label>
+<div class="flex gap-md">
+<label class="flex items-center gap-xs"><input checked="" id="ann_audience_dashboard" name="ann_audience" type="radio" value="dashboard"/> Seller Dashboards</label>
+<label class="flex items-center gap-xs"><input id="ann_audience_store" name="ann_audience" type="radio" value="store"/> Public Store</label>
+</div>
+</div>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg font-bold" id="post_ann_btn" type="button">Post Announcement</button>
+</section>
+
+</main>
+
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-50" id="toast">
+<span class="material-symbols-outlined text-[#7ffc97]">check_circle</span><span class="font-label-md text-label-md" id="toast_text">Done</span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function showToast(msg) {
+        document.getElementById('toast_text').textContent = msg;
+        const t = document.getElementById('toast');
+        t.classList.add('active');
+        setTimeout(() => t.classList.remove('active'), 2500);
+    }
+    function showError(msg) {
+        document.getElementById('form_error_text').textContent = msg;
+        document.getElementById('form_error').classList.remove('hidden');
+    }
+    function denyAccess() {
+        document.body.innerHTML = '';
+        const el = document.createElement('div');
+        el.className = 'fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center gap-md';
+        el.innerHTML = '<p style="font-family: Inter, sans-serif; color: #3e4a3d;">Page not found.</p>';
+        document.body.appendChild(el);
+    }
+
+    async function loadPending() {
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('*, stores(store_name)')
+            .eq('approval_status', 'pending')
+            .order('created_at', { ascending: true });
+
+        const list = document.getElementById('pending_list');
+        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">Nothing waiting for review.</p>'; return; }
+
+        list.innerHTML = data.map(p => `
+            <div class="flex items-center justify-between gap-md p-sm border border-outline-variant/30 rounded-lg">
+                <div class="flex items-center gap-md min-w-0">
+                    <div class="w-14 h-14 bg-surface-container-high rounded-lg overflow-hidden flex-shrink-0">
+                        ${p.image_urls && p.image_urls[0] ? `<img src="${p.image_urls[0]}" class="w-full h-full object-cover" />` : ''}
+                    </div>
+                    <div class="min-w-0">
+                        <p class="font-label-md text-on-surface truncate">${p.name}</p>
+                        <p class="text-label-sm text-on-surface-variant">${p.stores ? p.stores.store_name : ''} · ₦${Number(p.price).toLocaleString()} · ${p.product_type}</p>
+                    </div>
+                </div>
+                <div class="flex gap-xs flex-shrink-0">
+                    <button class="bg-primary text-on-primary px-md py-1 rounded-lg text-sm font-bold approve-btn" data-id="${p.id}">Approve</button>
+                    <button class="bg-error-container text-on-error-container px-md py-1 rounded-lg text-sm font-bold reject-btn" data-id="${p.id}">Reject</button>
+                </div>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.approve-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const { error } = await supabaseClient.rpc('admin_review_product', { p_product_id: btn.getAttribute('data-id'), p_approve: true });
+                if (error) { showError(error.message); return; }
+                showToast('Approved — seller notified.');
+                loadPending();
+                loadStats();
+            });
+        });
+        list.querySelectorAll('.reject-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reason = prompt('Reason for rejection (shown to the seller):');
+                if (reason === null) return;
+                const { error } = await supabaseClient.rpc('admin_review_product', { p_product_id: btn.getAttribute('data-id'), p_approve: false, p_reason: reason });
+                if (error) { showError(error.message); return; }
+                showToast('Rejected — seller notified.');
+                loadPending();
+                loadStats();
+            });
+        });
+    }
+
+    async function loadStats() {
+        const { data, error } = await supabaseClient.rpc('admin_get_stats');
+        if (error) { showError(error.message); return; }
+        document.getElementById('stat_users').textContent = data.total_users;
+        document.getElementById('stat_sellers').textContent = data.total_sellers;
+        document.getElementById('stat_buyers').textContent = data.total_buyers;
+        document.getElementById('stat_pending').textContent = data.pending_products;
+        document.getElementById('stat_approved').textContent = data.approved_products;
+        document.getElementById('stat_orders').textContent = data.total_orders;
+    }
+
+    document.getElementById('post_ann_btn').addEventListener('click', async () => {
+        const title = document.getElementById('ann_title').value.trim();
+        const body = document.getElementById('ann_body').value.trim();
+        const audience = document.getElementById('ann_audience_store').checked ? 'store' : 'dashboard';
+        if (!title || !body) { showError('Please fill in both title and message.'); return; }
+
+        const { error } = await supabaseClient.rpc('admin_post_announcement', { p_title: title, p_body: body, p_audience: audience });
+        if (error) { showError(error.message); return; }
+        showToast('Announcement posted.');
+        document.getElementById('ann_title').value = '';
+        document.getElementById('ann_body').value = '';
+    });
+
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { denyAccess(); return; }
+
+        const { data: profile } = await supabaseClient.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
+        if (!profile || !profile.is_admin) { denyAccess(); return; }
+
+        loadStats();
+        loadPending();
+    }
+
+    init();
+</script>
+</body></html>
