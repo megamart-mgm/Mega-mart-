@@ -42,9 +42,6 @@
             margin-bottom: 1rem;
         }
 
-        /* =============================================
-           FIX 2: MOBILE FONT SIZES — much smaller defaults
-        =============================================== */
         h1 { font-size: 1.7rem; font-weight: 700; }
         h2 { font-size: 1.4rem; font-weight: 600; }
         h3 { font-size: 1.1rem; font-weight: 500; }
@@ -68,7 +65,6 @@
         .mt-md { margin-top: 30px; }
         .mt-lg { margin-top: 40px; }
 
-        /* Buttons */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -122,9 +118,6 @@
         }
         .btn-link:hover::after { width: 100%; }
 
-        /* =============================================
-           FIX 1: HEADER / HAMBURGER MENU — complete rewrite
-        =============================================== */
         .header {
             background-color: var(--color-white);
             padding: 12px 0;
@@ -154,7 +147,6 @@
         }
         .logo i { margin-right: 8px; }
 
-        /* Hamburger — always hidden on desktop, visible on mobile */
         .menu-toggle {
             display: none;
             background: none;
@@ -166,14 +158,12 @@
             padding: 4px 8px;
         }
 
-        /* Mobile nav overlay */
         .nav {
             display: flex;
             align-items: center;
             gap: 20px;
         }
 
-        /* Close button — lives INSIDE the nav, hidden by default */
         .close-menu {
             display: none;
             background: none;
@@ -195,7 +185,6 @@
         }
         .nav a:hover { color: var(--color-green-primary); }
 
-        /* Dropdown */
         .dropdown { position: relative; }
         .dropbtn {
             background: none;
@@ -245,7 +234,6 @@
             color: var(--color-green-dark);
         }
 
-        /* Start Selling button */
         .dropdown-selling .dropbtn {
             background-color: var(--color-green-primary);
             color: var(--color-white);
@@ -258,12 +246,11 @@
         .dropdown-selling .dropbtn:hover { background-color: var(--color-green-dark); }
         .dropdown-selling .dropdown-content { left: auto; right: 0; transform: none; }
 
-        /* MOBILE NAV */
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
 
             .nav {
-                display: none; /* hidden by default on mobile */
+                display: none;
                 flex-direction: column;
                 align-items: flex-start;
                 position: fixed;
@@ -276,10 +263,7 @@
                 gap: 0;
             }
 
-            /* Show nav when active */
             .nav.active { display: flex; }
-
-            /* Show close button only when nav is active */
             .nav.active .close-menu { display: block; }
 
             .nav a {
@@ -322,14 +306,10 @@
             .dropdown-selling .dropdown-content { border-radius: 10px; margin-top: 8px; }
         }
 
-        /* DESKTOP NAV */
         @media (min-width: 769px) {
             .menu-toggle, .close-menu { display: none !important; }
         }
 
-        /* =============================================
-           FIX 3: HERO — solid green gradient, no image
-        =============================================== */
         .hero-section {
             background: linear-gradient(135deg, #2E7D32 0%, #4CAF50 50%, #66BB6A 100%);
             padding: 70px 20px;
@@ -343,7 +323,6 @@
             overflow: hidden;
         }
 
-        /* Subtle decorative circles */
         .hero-section::before {
             content: '';
             position: absolute;
@@ -414,7 +393,6 @@
             border-color: var(--color-white);
         }
 
-        /* Trusted By */
         .trusted-by-section { padding: 30px 0; }
         .trusted-by-section p {
             font-weight: 600;
@@ -433,7 +411,6 @@
         .trusted-logos img { max-width: 100px; height: auto; display: block; transition: transform 0.3s ease; }
         .trusted-logos img:hover { transform: scale(1.05); }
 
-        /* Product Types / Steps / Features / Testimonials */
         .product-types-grid,
         .steps-grid,
         .features-grid,
@@ -488,7 +465,6 @@
         .step-card h3 { color: var(--color-white); font-size: 1rem; margin-bottom: 8px; }
         .step-card p { font-size: 0.88rem; color: rgba(255,255,255,0.9); }
 
-        /* Two-column sections */
         .show-love-section .container,
         .global-payments-section .container,
         .ebook-cta-section .container {
@@ -566,7 +542,6 @@
             font-size: 5rem; color: var(--color-green-primary);
         }
 
-        /* Final CTA */
         .final-cta-section {
             background-color: var(--color-green-primary);
             color: var(--color-white);
@@ -602,7 +577,6 @@
         }
         .final-cta-actions .btn-secondary:hover { background-color: rgba(255,255,255,0.1); }
 
-        /* Footer */
         .footer {
             background-color: var(--color-text-dark);
             color: var(--color-white);
@@ -639,9 +613,6 @@
         .social-links a { color: rgba(255,255,255,0.7); font-size: 1.2rem; transition: color 0.3s ease, transform 0.3s ease; }
         .social-links a:hover { color: var(--color-green-primary); transform: translateY(-3px); }
 
-        /* =============================================
-           FIX 4: PRIVACY POLICY MODAL
-        =============================================== */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -708,7 +679,6 @@
             text-align: right;
         }
 
-        /* Desktop overrides */
         @media (min-width: 768px) {
             h1 { font-size: 3.2rem; }
             h2 { font-size: 2.2rem; }
@@ -767,7 +737,6 @@
 </head>
 <body>
 
-    <!-- ============ PRIVACY POLICY MODAL (FIX 4) ============ -->
     <div class="modal-overlay" id="privacyModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -851,40 +820,37 @@
         </div>
     </div>
 
-    <!-- ============ HEADER ============ -->
     <header class="header">
         <div class="container">
             <div class="logo">
                 <i class="fas fa-shopping-basket"></i> Mega Mart
             </div>
 
-            <!-- Hamburger: visible only on mobile -->
             <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">
                 <i class="fas fa-bars"></i>
             </button>
 
             <nav class="nav" id="mainNav">
-                <!-- Close button: inside nav, only visible when nav is open -->
                 <button class="close-menu" id="closeMenu" aria-label="Close navigation">
                     <i class="fas fa-times"></i>
                 </button>
 
-                <a href="how.html">How It Works</a>
-                <a href="price.html">Pricing</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#features">Pricing</a>
 
                 <div class="dropdown">
                     <button class="dropbtn">Features <i class="fas fa-chevron-down"></i></button>
                     <div class="dropdown-content">
-                        <a href="feature.html">Sell Digital Products</a>
-                        <a href="feature.html">Sell Physical Products</a>
-                        <a href="feature.html">Become an Affiliate Marketer</a>
-                        <a href="feature.html">Hire Services</a>
-                        <a href="feature.html">Sell Tickets</a>
+                        <a href="#what-you-can-sell">Sell Digital Products</a>
+                        <a href="#what-you-can-sell">Sell Physical Products</a>
+                        <a href="#features">Become an Affiliate Marketer</a>
+                        <a href="#what-you-can-sell">Hire Services</a>
+                        <a href="#what-you-can-sell">Sell Tickets</a>
                     </div>
                 </div>
 
-                <a href="learn.html">Learn</a>
-                <a href="affiliate.html">Affiliate Program</a>
+                <a href="#learn">Learn</a>
+                <a href="#features">Affiliate Program</a>
 
                 <div class="dropdown dropdown-selling">
                     <button class="dropbtn">Start Selling <i class="fas fa-chevron-down"></i></button>
@@ -898,7 +864,6 @@
     </header>
 
     <main>
-        <!-- HERO -->
         <section class="hero-section">
             <div class="container">
                 <div class="hero-content">
@@ -907,25 +872,18 @@
                     <p>Mega Mart is your all-in-one platform for listing and selling any kind of product or service — physical or digital — absolutely free. Unlock powerful marketing tools with our premium packages.</p>
                     <div class="hero-actions">
                         <a href="signup.html" class="btn btn-primary btn-large">Start Selling for Free</a>
-                        <a href="price.html" class="btn btn-secondary btn-large">Discover Premium</a>
+                        <a href="#features" class="btn btn-secondary btn-large">Discover Premium</a>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- TRUSTED BY -->
         <section class="trusted-by-section">
             <div class="container">
                 <p>Trusted by thousands of sellers worldwide.</p>
-                <div class="trusted-logos">
-                    <img src="logo1.jpg" alt="Trusted Brand 1">
-                    <img src="logo2.jpg" alt="Trusted Brand 2">
-                    <img src="logo3.jpg" alt="Trusted Brand 3">
-                </div>
             </div>
         </section>
 
-        <!-- WHAT YOU CAN SELL -->
         <section id="what-you-can-sell" class="section product-types-section">
             <div class="container">
                 <h2>Sell Any Kind of Product, Service, or Subscription</h2>
@@ -964,7 +922,6 @@
             </div>
         </section>
 
-        <!-- HOW IT WORKS -->
         <section id="how-it-works" class="section how-it-works-section">
             <div class="container">
                 <h2>It's Simple and Easy to Set Up</h2>
@@ -986,26 +943,24 @@
                     </div>
                 </div>
                 <div class="text-center mt-lg">
-                    <a href="how.html" class="btn btn-secondary">Find Out More</a>
+                    <a href="signup.html" class="btn btn-secondary">Find Out More</a>
                 </div>
             </div>
         </section>
 
-        <!-- SHOW LOVE -->
-        <section class="section show-love-section">
+        <section class="section show-love-section" id="show-love">
             <div class="container">
                 <div class="content-left">
                     <h2>Give Your Fans an Easy Way to Show Love!</h2>
                     <p>Mega Mart enables you to easily accept tips and donations from your supporters and fans from all over the world, adding another stream of income.</p>
-                    <a href="#" class="btn btn-secondary">Learn More</a>
+                    <a href="signup.html" class="btn btn-secondary">Learn More</a>
                 </div>
-                <div class="illustration-placeholder">
-                    <img src="setup_img1.png" alt="Grow today">
+                <div class="illustration-placeholder" style="background-color: var(--color-green-light); font-size: 5rem; color: var(--color-green-primary);">
+                    <i class="fas fa-hand-holding-heart"></i>
                 </div>
             </div>
         </section>
 
-        <!-- GLOBAL PAYMENTS -->
         <section class="section global-payments-section">
             <div class="container">
                 <div class="illustration-placeholder" style="background-color: var(--color-green-light); font-size: 5rem; color: var(--color-green-primary);">
@@ -1013,19 +968,11 @@
                 </div>
                 <div class="content-right">
                     <h2>Never Lose an International Customer Again!</h2>
-                    <p>We've integrated multiple payment gateways to ensure you can receive payments from anywhere in the world, including PayPal and Stripe, so all your international customers can pay without any hassle.</p>
-                    <div class="payment-logos">
-                        <img src="https://via.placeholder.com/80x40/f0f0f0/008000?text=PayPal" alt="PayPal">
-                        <img src="https://via.placeholder.com/80x40/f0f0f0/008000?text=M-Pesa" alt="M-Pesa">
-                        <img src="https://via.placeholder.com/80x40/f0f0f0/008000?text=Stripe" alt="Stripe">
-                        <img src="https://via.placeholder.com/80x40/f0f0f0/008000?text=Visa" alt="Visa">
-                        <img src="https://via.placeholder.com/80x40/f0f0f0/008000?text=MC" alt="MasterCard">
-                    </div>
+                    <p>We've integrated multiple payment gateways to ensure you can receive payments from anywhere in the world, so all your customers can pay without any hassle.</p>
                 </div>
             </div>
         </section>
 
-        <!-- PREMIUM FEATURES -->
         <section id="features" class="section premium-features-section">
             <div class="container">
                 <h2>Make More Sales with the Right Tools <span class="premium-tag">Premium Features</span></h2>
@@ -1034,50 +981,43 @@
                         <i class="fas fa-users"></i>
                         <h3>Affiliate System</h3>
                         <p>Set up your own affiliate marketing system and give commissions for anyone that facilitates a sale for your store.</p>
-                        <a href="features.html#affiliate" class="btn-link">Learn more</a>
+                        <a href="signup.html" class="btn-link">Learn more</a>
                     </div>
                     <div class="feature-card">
                         <i class="fas fa-file-alt"></i>
                         <h3>Sales Pages</h3>
                         <p>Create custom, high-converting sales/landing pages for your products. Descriptive pages drive more conversions.</p>
-                        <a href="features.html" class="btn-link">Learn more</a>
+                        <a href="signup.html" class="btn-link">Learn more</a>
                     </div>
                     <div class="feature-card">
                         <i class="fas fa-envelope-open-text"></i>
                         <h3>Automated Follow-ups</h3>
                         <p>Never miss a prospective buyer with Mega Mart's automated follow-ups. Proven to drive conversions by at least 30%.</p>
-                        <a href="features.html" class="btn-link">Learn more</a>
+                        <a href="signup.html" class="btn-link">Learn more</a>
                     </div>
                     <div class="feature-card">
                         <i class="fas fa-trophy"></i>
                         <h3>Affiliate Challenges</h3>
                         <p>Grow your sales and motivate affiliates with leaderboard-based challenges, rewards, and automated tracking.</p>
-                        <a href="features.html#affiliate" class="btn-link">Learn more</a>
+                        <a href="signup.html" class="btn-link">Learn more</a>
                     </div>
                 </div>
                 <div class="text-center mt-lg">
-                    <a href="features.html" class="btn btn-secondary">See all features</a>
+                    <a href="upgrade-plan.html" class="btn btn-secondary">See Pricing</a>
                 </div>
             </div>
         </section>
 
-        <!-- INTEGRATIONS -->
-        <section class="section integrations-section">
+        <section class="section integrations-section" id="integrations">
             <div class="container">
                 <h2>Seamlessly Integrate with Your Favourite Tools</h2>
                 <p>Double your conversion by integrating your favorite marketing, analytics, and CRM tools on Mega Mart.</p>
-                <div class="integration-logos">
-                    <img src="https://via.placeholder.com/100x50/f0f0f0/008000?text=Facebook" alt="Facebook">
-                    <img src="https://via.placeholder.com/100x50/f0f0f0/008000?text=Mailchimp" alt="Mailchimp">
-                    <img src="https://via.placeholder.com/100x50/f0f0f0/008000?text=ConvertKit" alt="ConvertKit">
-                </div>
                 <div class="text-center mt-md">
-                    <a href="#" class="btn btn-secondary">See all integrations</a>
+                    <a href="signup.html" class="btn btn-secondary">Get Started</a>
                 </div>
             </div>
         </section>
 
-        <!-- TESTIMONIALS -->
         <section class="section testimonials-section">
             <div class="container">
                 <h2>Don't Take Our Word For It!</h2>
@@ -1102,13 +1042,12 @@
             </div>
         </section>
 
-        <!-- EBOOK CTA -->
-        <section class="section ebook-cta-section">
+        <section class="section ebook-cta-section" id="learn">
             <div class="container">
                 <div class="ebook-content">
                     <h2>Get Started Creating & Selling Products!</h2>
-                    <p>Whether you're a newbie or already selling online, we collaborated with experts to create THE ULTIMATE DIGITAL PRODUCT MANUAL — a free ebook to help you turn your knowledge into income.</p>
-                    <a href="#" class="btn btn-primary btn-large">Get Free Ebook</a>
+                    <p>Whether you're a newbie or already selling online, our free guide will help you turn your knowledge into income.</p>
+                    <a href="signup.html" class="btn btn-primary btn-large">Get Started Free</a>
                 </div>
                 <div class="ebook-illustration-placeholder">
                     <i class="fas fa-book"></i>
@@ -1116,20 +1055,18 @@
             </div>
         </section>
 
-        <!-- FINAL CTA -->
         <section class="section final-cta-section">
             <div class="container">
                 <h2>Start Selling with Mega Mart Today!</h2>
                 <p>Create a free account in less than 5 minutes and start selling to the world.</p>
                 <div class="final-cta-actions">
                     <a href="signup.html" class="btn btn-primary btn-large">Get Started for Free</a>
-                    <a href="#" class="btn btn-secondary btn-large">See a Live Demo</a>
+                    <a href="store.html" class="btn btn-secondary btn-large">See a Live Demo</a>
                 </div>
             </div>
         </section>
     </main>
 
-    <!-- FOOTER -->
     <footer class="footer">
         <div class="container">
             <div class="footer-top">
@@ -1140,42 +1077,42 @@
                     <div class="footer-col">
                         <h3>Products</h3>
                         <ul>
-                            <li><a href="how.html">How It Works</a></li>
-                            <li><a href="feature.html">Features</a></li>
-                            <li><a href="price.html">Pricing</a></li>
-                            <li><a href="affiliate.html">Affiliate Program</a></li>
-                            <li><a href="features.html#courses">Sell Courses</a></li>
-                            <li><a href="#">Show Love</a></li>
-                            <li><a href="features.html#tickets">Tickets</a></li>
-                            <li><a href="features.html#integrations">Integrations</a></li>
+                            <li><a href="#how-it-works">How It Works</a></li>
+                            <li><a href="#features">Features</a></li>
+                            <li><a href="upgrade-plan.html">Pricing</a></li>
+                            <li><a href="#features">Affiliate Program</a></li>
+                            <li><a href="#what-you-can-sell">Sell Courses</a></li>
+                            <li><a href="#show-love">Show Love</a></li>
+                            <li><a href="#what-you-can-sell">Tickets</a></li>
+                            <li><a href="#integrations">Integrations</a></li>
                         </ul>
                     </div>
                     <div class="footer-col">
                         <h3>Community</h3>
                         <ul>
-                            <li><a href="#">Support & Resources</a></li>
-                            <li><a href="learn.html">Blog</a></li>
-                            <li><a href="#">Helpdesk & Guides</a></li>
-                            <li><a href="#">Creator Academy</a></li>
-                            <li><a href="#">Free Product Templates</a></li>
-                            <li><a href="#">Press & Media Kits</a></li>
-                            <li><a href="#">FAQs</a></li>
-                            <li><a href="#">Contact Us</a></li>
+                            <li><a href="mailto:support@megamart.com">Support & Resources</a></li>
+                            <li><a href="#learn">Blog</a></li>
+                            <li><a href="mailto:support@megamart.com">Helpdesk & Guides</a></li>
+                            <li><a href="#learn">Creator Academy</a></li>
+                            <li><a href="#learn">Free Product Templates</a></li>
+                            <li><a href="mailto:support@megamart.com">Press & Media Kits</a></li>
+                            <li><a href="policies.html">FAQs</a></li>
+                            <li><a href="mailto:support@megamart.com">Contact Us</a></li>
                         </ul>
                     </div>
                     <div class="footer-col">
                         <h3>Legal</h3>
                         <ul>
-                            <li><a href="#">Terms & Conditions</a></li>
-                            <!-- FIX 4: Privacy Policy triggers modal -->
+                            <li><a href="terms.html">Terms & Conditions</a></li>
                             <li><a href="#" onclick="openModal('privacyModal'); return false;">Privacy Policy</a></li>
-                            <li><a href="#">DMCA Takedown Form</a></li>
+                            <li><a href="policies.html">Store Policies</a></li>
+                            <li><a href="mailto:support@megamart.com">DMCA Takedown Form</a></li>
                         </ul>
                     </div>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Mega Mart. All Rights Reserved.</p>
+                <p>&copy; 2026 Mega Mart. All Rights Reserved.</p>
                 <div class="social-links">
                     <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
                     <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
@@ -1187,9 +1124,6 @@
     </footer>
 
     <script>
-        // =============================================
-        // FIX 1: HAMBURGER MENU — clean, simple logic
-        // =============================================
         const menuToggle = document.getElementById('menuToggle');
         const closeMenu  = document.getElementById('closeMenu');
         const mainNav    = document.getElementById('mainNav');
@@ -1202,27 +1136,23 @@
         function closeNav() {
             mainNav.classList.remove('active');
             document.body.style.overflow = '';
-            // Close any open dropdowns too
             document.querySelectorAll('.dropdown.active').forEach(d => d.classList.remove('active'));
         }
 
         menuToggle.addEventListener('click', openNav);
         closeMenu.addEventListener('click', closeNav);
 
-        // Close nav when a regular link is clicked
         mainNav.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', function() {
                 if (mainNav.classList.contains('active')) closeNav();
             });
         });
 
-        // Mobile dropdown toggles
         document.querySelectorAll('.dropdown').forEach(dropdown => {
             const btn = dropdown.querySelector('.dropbtn');
             btn.addEventListener('click', function(e) {
                 if (window.innerWidth < 769) {
                     e.preventDefault();
-                    // Close siblings
                     document.querySelectorAll('.dropdown').forEach(d => {
                         if (d !== dropdown) d.classList.remove('active');
                     });
@@ -1231,7 +1161,6 @@
             });
         });
 
-        // Close nav if clicking outside (on overlay area)
         document.addEventListener('click', function(e) {
             if (mainNav.classList.contains('active') &&
                 !mainNav.contains(e.target) &&
@@ -1240,9 +1169,6 @@
             }
         });
 
-        // =============================================
-        // FIX 4: MODAL FUNCTIONS
-        // =============================================
         function openModal(id) {
             document.getElementById(id).classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -1253,7 +1179,6 @@
             document.body.style.overflow = '';
         }
 
-        // Close modal when clicking outside the box
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', function(e) {
                 if (e.target === overlay) {
@@ -1263,7 +1188,6 @@
             });
         });
 
-        // Close modal with Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 document.querySelectorAll('.modal-overlay.active').forEach(m => {
