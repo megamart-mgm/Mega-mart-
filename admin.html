@@ -49,7 +49,7 @@
 <div class="fixed inset-0 bg-background z-[90] flex-col items-center justify-center gap-md px-md" id="login_screen">
 <span class="material-symbols-outlined text-5xl text-primary">admin_panel_settings</span>
 <h1 class="font-headline-md text-headline-md text-on-surface">Control Room</h1>
-<div class="w-full max-w-[340px] space-y-sm mt-md">
+<div class="w-full max-w-[340px] space-y-sm mt-md px-2">
 <div class="hidden p-sm bg-error-container rounded-lg" id="login_error"><p class="font-label-md text-label-md text-on-error-container" id="login_error_text"></p></div>
 <div class="space-y-xs">
 <label class="block font-label-md text-label-md text-on-surface-variant" for="login_email">Admin email</label>
@@ -79,23 +79,23 @@
 <button class="text-on-surface-variant font-label-md text-label-md flex-shrink-0 whitespace-nowrap" id="logout_btn" type="button">Sign out</button>
 </header>
 
-<main class="mt-20 px-md max-w-[900px] mx-auto space-y-lg">
+<main class="mt-20 px-sm sm:px-md max-w-[900px] mx-auto space-y-md sm:space-y-lg">
 
 <div class="hidden p-md bg-error-container rounded-lg" id="form_error"><p class="font-label-md text-label-md text-on-error-container" id="form_error_text"></p></div>
 
 <!-- Stats -->
-<div class="grid grid-cols-2 md:grid-cols-3 gap-md">
-<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Total Users</p><p class="text-2xl font-bold text-primary" id="stat_users">—</p></div>
-<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Sellers</p><p class="text-2xl font-bold text-primary" id="stat_sellers">—</p></div>
-<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Buyers</p><p class="text-2xl font-bold text-primary" id="stat_buyers">—</p></div>
-<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Pending Products</p><p class="text-2xl font-bold text-primary" id="stat_pending">—</p></div>
-<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Approved Products</p><p class="text-2xl font-bold text-primary" id="stat_approved">—</p></div>
-<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Completed Orders</p><p class="text-2xl font-bold text-primary" id="stat_orders">—</p></div>
-<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Pending Upgrades</p><p class="text-2xl font-bold text-primary" id="stat_pending_upgrades">—</p></div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-sm sm:gap-md">
+<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Total Users</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_users">—</p></div>
+<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Sellers</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_sellers">—</p></div>
+<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Buyers</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_buyers">—</p></div>
+<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Pending Products</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_pending">—</p></div>
+<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Approved Products</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_approved">—</p></div>
+<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Completed Orders</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_orders">—</p></div>
+<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Pending Upgrades</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_pending_upgrades">—</p></div>
 </div>
 
 <!-- Pending approvals -->
-<section class="section-card p-lg space-y-md">
+<section class="section-card p-sm sm:p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Products Awaiting Approval</h2>
 <div class="space-y-sm" id="pending_list">
 <p class="text-on-surface-variant">Loading...</p>
@@ -103,7 +103,7 @@
 </section>
 
 <!-- Pending plan upgrades -->
-<section class="section-card p-lg space-y-md">
+<section class="section-card p-sm sm:p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Pending Plan Upgrades</h2>
 <div class="space-y-sm" id="upgrades_list">
 <p class="text-on-surface-variant">Loading...</p>
@@ -111,7 +111,7 @@
 </section>
 
 <!-- Announcement composer -->
-<section class="section-card p-lg space-y-md">
+<section class="section-card p-sm sm:p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Post an Announcement</h2>
 <div class="space-y-xs">
 <label class="block font-label-md text-label-md text-on-surface-variant" for="ann_title">Title</label>
@@ -218,9 +218,9 @@
         if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">Nothing waiting for review.</p>'; return; }
 
         list.innerHTML = data.map(p => `
-            <div class="flex items-center justify-between gap-md p-sm border border-outline-variant/30 rounded-lg">
-                <div class="flex items-center gap-md min-w-0">
-                    <div class="w-14 h-14 bg-surface-container-high rounded-lg overflow-hidden flex-shrink-0">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
+                <div class="flex items-center gap-sm sm:gap-md min-w-0">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 bg-surface-container-high rounded-lg overflow-hidden flex-shrink-0">
                         ${p.image_urls && p.image_urls[0] ? `<img src="${p.image_urls[0]}" class="w-full h-full object-cover" />` : ''}
                     </div>
                     <div class="min-w-0">
@@ -229,8 +229,8 @@
                     </div>
                 </div>
                 <div class="flex gap-xs flex-shrink-0">
-                    <button class="bg-primary text-on-primary px-md py-1 rounded-lg text-sm font-bold approve-btn" data-id="${p.id}">Approve</button>
-                    <button class="bg-error-container text-on-error-container px-md py-1 rounded-lg text-sm font-bold reject-btn" data-id="${p.id}">Reject</button>
+                    <button class="flex-1 sm:flex-none bg-primary text-on-primary px-md py-2 sm:py-1 rounded-lg text-sm font-bold approve-btn" data-id="${p.id}">Approve</button>
+                    <button class="flex-1 sm:flex-none bg-error-container text-on-error-container px-md py-2 sm:py-1 rounded-lg text-sm font-bold reject-btn" data-id="${p.id}">Reject</button>
                 </div>
             </div>
         `).join('');
@@ -281,14 +281,14 @@
         if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">No upgrades waiting for confirmation.</p>'; return; }
 
         list.innerHTML = data.map(r => `
-            <div class="flex items-center justify-between gap-md p-sm border border-outline-variant/30 rounded-lg">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
                 <div class="min-w-0">
                     <p class="font-label-md text-on-surface truncate">${r.stores ? r.stores.store_name : 'Unknown store'} — ${r.requested_plan.toUpperCase()}</p>
-                    <p class="text-label-sm text-on-surface-variant">${r.profiles ? r.profiles.email : ''} · ₦${Number(r.amount).toLocaleString()} · ref: ${r.paystack_reference}</p>
+                    <p class="text-label-sm text-on-surface-variant break-words">${r.profiles ? r.profiles.email : ''} · ₦${Number(r.amount).toLocaleString()} · ref: ${r.paystack_reference}</p>
                 </div>
                 <div class="flex gap-xs flex-shrink-0">
-                    <button class="bg-primary text-on-primary px-md py-1 rounded-lg text-sm font-bold grant-btn" data-id="${r.id}">Grant Access</button>
-                    <button class="bg-error-container text-on-error-container px-md py-1 rounded-lg text-sm font-bold reject-upgrade-btn" data-id="${r.id}">Reject</button>
+                    <button class="flex-1 sm:flex-none bg-primary text-on-primary px-md py-2 sm:py-1 rounded-lg text-sm font-bold grant-btn" data-id="${r.id}">Grant Access</button>
+                    <button class="flex-1 sm:flex-none bg-error-container text-on-error-container px-md py-2 sm:py-1 rounded-lg text-sm font-bold reject-upgrade-btn" data-id="${r.id}">Reject</button>
                 </div>
             </div>
         `).join('');
