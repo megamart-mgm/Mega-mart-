@@ -253,8 +253,8 @@
     const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Pro is now 50 products (was 30) — matches the admin-approved upgrade flow
-    const PLAN_LIMITS = { free: 5, pro: 50, gold: 100 };
+    // Pro=50, Gold=100, Custom=unlimited (very high ceiling for the progress bar math)
+    const PLAN_LIMITS = { free: 5, pro: 50, gold: 100, custom: 999999 };
 
     function showToast(msg) {
         document.getElementById('toast_text').textContent = msg;
@@ -391,8 +391,10 @@
         // Product limit bar
         const limit = PLAN_LIMITS[store.plan] || 5;
         const count = products.length;
-        document.getElementById('product_limit_text').textContent = `${count} / ${limit} used`;
-        document.getElementById('product_limit_bar').style.width = Math.min(100, (count / limit) * 100) + '%';
+        document.getElementById('product_limit_text').textContent = store.plan === 'custom'
+            ? `${count} listed · Unlimited`
+            : `${count} / ${limit} used`;
+        document.getElementById('product_limit_bar').style.width = store.plan === 'custom' ? '4px' : Math.min(100, (count / limit) * 100) + '%';
         if (count >= limit) {
             document.getElementById('upgrade_prompt').classList.remove('hidden');
         } else {
