@@ -52,12 +52,12 @@
 
 <p class="font-body-md text-body-md text-on-surface-variant" id="current_plan_text">Loading your current plan...</p>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md">
 
 <div class="plan-card p-lg space-y-sm">
 <h2 class="font-headline-md text-headline-md text-on-surface">Free</h2>
 <p class="text-3xl font-bold text-primary">₦0</p>
-<p class="text-label-sm text-on-surface-variant">Up to 5 products</p>
+<p class="text-label-sm text-on-surface-variant">Sell up to 5 products</p>
 <button class="w-full h-11 mt-md bg-surface-container-low text-on-surface-variant rounded-lg font-bold" disabled="">Current default</button>
 </div>
 
@@ -66,15 +66,24 @@
 <h2 class="font-headline-md text-headline-md text-on-surface">Pro</h2>
 <p class="text-3xl font-bold text-primary" id="pro_price">₦10,000</p>
 <p class="text-label-sm text-on-surface-variant" id="pro_price_note">First 3 months, then ₦4,000/month</p>
-<p class="text-label-sm text-on-surface-variant mt-xs">Up to 50 products</p>
+<p class="text-label-sm text-on-surface-variant mt-xs">Sell up to 50 products</p>
 <button class="w-full h-11 mt-md bg-primary text-on-primary rounded-lg font-bold active:scale-95 transition-all" id="pay_pro_btn">Upgrade to Pro</button>
 </div>
 
 <div class="plan-card p-lg space-y-sm">
 <h2 class="font-headline-md text-headline-md text-on-surface">Gold</h2>
-<p class="text-3xl font-bold text-primary">Contact us</p>
-<p class="text-label-sm text-on-surface-variant">Up to 100+ products</p>
-<button class="w-full h-11 mt-md bg-surface-container-low text-on-surface-variant rounded-lg font-bold" id="gold_btn">Chat on WhatsApp</button>
+<p class="text-3xl font-bold text-primary">₦25,000</p>
+<p class="text-label-sm text-on-surface-variant">Every 3 months</p>
+<p class="text-label-sm text-on-surface-variant mt-xs">Sell up to 100 products</p>
+<button class="w-full h-11 mt-md bg-primary text-on-primary rounded-lg font-bold active:scale-95 transition-all" id="pay_gold_btn">Upgrade to Gold</button>
+</div>
+
+<div class="plan-card p-lg space-y-sm">
+<h2 class="font-headline-md text-headline-md text-on-surface">Custom</h2>
+<p class="text-3xl font-bold text-primary">₦50,000</p>
+<p class="text-label-sm text-on-surface-variant">Every 3 months</p>
+<p class="text-label-sm text-on-surface-variant mt-xs">Sell unlimited products</p>
+<button class="w-full h-11 mt-md bg-primary text-on-primary rounded-lg font-bold active:scale-95 transition-all" id="pay_custom_btn">Upgrade to Custom</button>
 </div>
 
 </div>
@@ -119,8 +128,11 @@
 
         if (data && data.length > 0) {
             document.getElementById('pending_banner').classList.remove('hidden');
-            document.getElementById('pay_pro_btn').disabled = true;
-            document.getElementById('pay_pro_btn').textContent = 'Upgrade pending confirmation';
+            ['pay_pro_btn', 'pay_gold_btn', 'pay_custom_btn'].forEach(id => {
+                const btn = document.getElementById(id);
+                btn.disabled = true;
+                btn.textContent = 'Upgrade pending confirmation';
+            });
         }
     }
 
@@ -145,17 +157,16 @@
             document.getElementById('pay_pro_btn').textContent = 'Renew Pro';
         }
         if (store.plan === 'gold') {
-            document.getElementById('pay_pro_btn').disabled = true;
-            document.getElementById('pay_pro_btn').textContent = "You're already on Gold";
+            document.getElementById('pay_gold_btn').textContent = 'Renew Gold';
+        }
+        if (store.plan === 'custom') {
+            document.getElementById('pay_gold_btn').disabled = true;
+            document.getElementById('pay_gold_btn').textContent = "Included in your Custom plan";
+            document.getElementById('pay_custom_btn').textContent = 'Renew Custom';
         }
 
         await checkPendingUpgrade();
     }
-
-    document.getElementById('gold_btn').addEventListener('click', () => {
-        const msg = encodeURIComponent("Hi, I'm interested in the Mega Mart Gold plan for my store.");
-        window.open(`https://wa.me/?text=${msg}`, '_blank');
-    });
 
     document.getElementById('pay_pro_btn').addEventListener('click', () => {
         if (!store) return;
@@ -164,22 +175,36 @@
         const amountNaira = isFirstPayment ? 10000 : 4000;
         const billingCycle = isFirstPayment ? 'pro_quarterly_intro' : 'pro_monthly';
 
+        startPayment('pro', amountNaira, billingCycle);
+    });
+
+    document.getElementById('pay_gold_btn').addEventListener('click', () => {
+        if (!store) return;
+        startPayment('gold', 25000, 'gold_quarterly');
+    });
+
+    document.getElementById('pay_custom_btn').addEventListener('click', () => {
+        if (!store) return;
+        startPayment('custom', 50000, 'custom_quarterly');
+    });
+
+    function startPayment(plan, amountNaira, billingCycle) {
         const handler = PaystackPop.setup({
             key: PAYSTACK_PUBLIC_KEY,
             email: currentUser.email,
             amount: amountNaira * 100, // kobo
             currency: 'NGN',
             ref: 'MEGAMART-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
-            metadata: { seller_id: currentUser.id, plan: 'pro', billing_cycle: billingCycle },
+            metadata: { seller_id: currentUser.id, plan, billing_cycle: billingCycle },
             callback: function (response) {
-                handlePaymentSuccess(response.reference, amountNaira, billingCycle);
+                handlePaymentSuccess(response.reference, plan, amountNaira, billingCycle);
             },
             onClose: function () {}
         });
         handler.openIframe();
-    });
+    }
 
-    async function handlePaymentSuccess(reference, amountNaira, billingCycle) {
+    async function handlePaymentSuccess(reference, plan, amountNaira, billingCycle) {
         // Payment no longer auto-grants the plan. It creates a pending request
         // that shows up on the admin Control Room for manual confirmation.
         // NOTE: for production-grade security, verify the payment server-side
@@ -189,7 +214,7 @@
         const { error } = await supabaseClient.from('plan_upgrade_requests').insert({
             seller_id: currentUser.id,
             store_id: store.id,
-            requested_plan: 'pro',
+            requested_plan: plan,
             amount: amountNaira,
             currency: 'NGN',
             paystack_reference: reference,
