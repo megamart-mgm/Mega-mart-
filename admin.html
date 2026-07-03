@@ -33,85 +33,46 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
         #toast { display: none; } #toast.active { display: flex; }
-        #login_screen { display: none; } #login_screen.active { display: flex; }
-        #admin_content { display: none; } #admin_content.active { display: block; }
-        #boot_screen { display: flex; }
+        #access_denied { display: none; }
+        #access_denied.active { display: flex; }
     </style>
 </head>
 <body class="bg-background text-on-background min-h-screen pb-24">
 
-<!-- Boot / loading state -->
-<div class="fixed inset-0 bg-background z-[100] flex-col items-center justify-center gap-md" id="boot_screen">
-<span class="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-</div>
-
-<!-- Login gate -->
-<div class="fixed inset-0 bg-background z-[90] flex-col items-center justify-center gap-md px-md" id="login_screen">
-<span class="material-symbols-outlined text-5xl text-primary">admin_panel_settings</span>
-<h1 class="font-headline-md text-headline-md text-on-surface">Control Room</h1>
-<div class="w-full max-w-[340px] space-y-sm mt-md px-2">
-<div class="hidden p-sm bg-error-container rounded-lg" id="login_error"><p class="font-label-md text-label-md text-on-error-container" id="login_error_text"></p></div>
-<div class="space-y-xs">
-<label class="block font-label-md text-label-md text-on-surface-variant" for="login_email">Admin email</label>
-<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg" id="login_email" type="email" autocomplete="username"/>
-</div>
-<div class="space-y-xs">
-<label class="block font-label-md text-label-md text-on-surface-variant" for="login_password">Password</label>
-<input class="w-full h-11 px-3 bg-white border border-[#E2E8F0] rounded-lg" id="login_password" type="password" autocomplete="current-password"/>
-</div>
-<button class="w-full bg-primary text-on-primary py-sm rounded-lg font-bold mt-xs" id="login_btn" type="button">Sign In</button>
-</div>
-</div>
-
-<!-- Access denied -->
-<div class="fixed inset-0 bg-background z-[100] flex-col items-center justify-center gap-md" id="access_denied" style="display:none;">
+<div class="fixed inset-0 bg-background z-[100] flex-col items-center justify-center gap-md" id="access_denied">
 <span class="material-symbols-outlined text-6xl text-tertiary">lock</span>
-<p class="font-body-md text-on-surface-variant" id="access_denied_text">Page not found.</p>
+<p class="font-body-md text-on-surface-variant">Page not found.</p>
 </div>
 
-<div id="admin_content">
-
-<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between gap-xs px-sm sm:px-md h-16 shadow-sm bg-surface">
-<div class="flex items-center gap-xs sm:gap-sm min-w-0">
-<span class="material-symbols-outlined text-primary flex-shrink-0">admin_panel_settings</span>
-<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary truncate">Control Room</span>
-</div>
-<button class="text-on-surface-variant font-label-md text-label-md flex-shrink-0 whitespace-nowrap" id="logout_btn" type="button">Sign out</button>
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
+<span class="material-symbols-outlined text-primary">admin_panel_settings</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Control Room</span>
 </header>
 
-<main class="mt-20 px-sm sm:px-md max-w-[900px] mx-auto space-y-md sm:space-y-lg">
+<main class="mt-20 px-md max-w-[900px] mx-auto space-y-lg">
 
 <div class="hidden p-md bg-error-container rounded-lg" id="form_error"><p class="font-label-md text-label-md text-on-error-container" id="form_error_text"></p></div>
 
 <!-- Stats -->
-<div class="grid grid-cols-2 sm:grid-cols-3 gap-sm sm:gap-md">
-<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Total Users</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_users">—</p></div>
-<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Sellers</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_sellers">—</p></div>
-<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Buyers</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_buyers">—</p></div>
-<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Pending Products</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_pending">—</p></div>
-<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Approved Products</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_approved">—</p></div>
-<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Completed Orders</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_orders">—</p></div>
-<div class="section-card p-sm sm:p-lg min-w-0"><p class="text-on-surface-variant font-label-md text-xs sm:text-sm truncate">Pending Upgrades</p><p class="text-lg sm:text-2xl font-bold text-primary" id="stat_pending_upgrades">—</p></div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-md">
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Total Users</p><p class="text-2xl font-bold text-primary" id="stat_users">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Sellers</p><p class="text-2xl font-bold text-primary" id="stat_sellers">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Buyers</p><p class="text-2xl font-bold text-primary" id="stat_buyers">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Pending Products</p><p class="text-2xl font-bold text-primary" id="stat_pending">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Approved Products</p><p class="text-2xl font-bold text-primary" id="stat_approved">—</p></div>
+<div class="section-card p-lg"><p class="text-on-surface-variant font-label-md">Completed Orders</p><p class="text-2xl font-bold text-primary" id="stat_orders">—</p></div>
 </div>
 
 <!-- Pending approvals -->
-<section class="section-card p-sm sm:p-lg space-y-md">
+<section class="section-card p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Products Awaiting Approval</h2>
 <div class="space-y-sm" id="pending_list">
 <p class="text-on-surface-variant">Loading...</p>
 </div>
 </section>
 
-<!-- Pending plan upgrades -->
-<section class="section-card p-sm sm:p-lg space-y-md">
-<h2 class="font-headline-md text-headline-md text-on-surface">Pending Plan Upgrades</h2>
-<div class="space-y-sm" id="upgrades_list">
-<p class="text-on-surface-variant">Loading...</p>
-</div>
-</section>
-
 <!-- Announcement composer -->
-<section class="section-card p-sm sm:p-lg space-y-md">
+<section class="section-card p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Post an Announcement</h2>
 <div class="space-y-xs">
 <label class="block font-label-md text-label-md text-on-surface-variant" for="ann_title">Title</label>
@@ -132,7 +93,6 @@
 </section>
 
 </main>
-</div>
 
 <div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-50" id="toast">
 <span class="material-symbols-outlined text-[#7ffc97]">check_circle</span><span class="font-label-md text-label-md" id="toast_text">Done</span>
@@ -144,9 +104,6 @@
     const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    function show(id) { document.getElementById(id).classList.add('active'); document.getElementById(id).style.display = ''; }
-    function hide(id) { document.getElementById(id).classList.remove('active'); document.getElementById(id).style.display = 'none'; }
-
     function showToast(msg) {
         document.getElementById('toast_text').textContent = msg;
         const t = document.getElementById('toast');
@@ -156,55 +113,14 @@
     function showError(msg) {
         document.getElementById('form_error_text').textContent = msg;
         document.getElementById('form_error').classList.remove('hidden');
-        console.error('[Control Room]', msg);
     }
-    function showLoginError(msg) {
-        document.getElementById('login_error_text').textContent = msg;
-        document.getElementById('login_error').classList.remove('hidden');
-        console.error('[Control Room login]', msg);
+    function denyAccess() {
+        document.body.innerHTML = '';
+        const el = document.createElement('div');
+        el.className = 'fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center gap-md';
+        el.innerHTML = '<p style="font-family: Inter, sans-serif; color: #3e4a3d;">Page not found.</p>';
+        document.body.appendChild(el);
     }
-    // Shows the REAL reason instead of a blanket "not found", visible in
-    // the page and in the console, so we can see what's actually failing.
-    function denyAccess(reason) {
-        hide('boot_screen'); hide('login_screen'); hide('admin_content');
-        document.getElementById('access_denied_text').textContent = reason || 'Page not found.';
-        document.getElementById('access_denied').style.display = 'flex';
-        console.error('[Control Room] Access denied:', reason);
-    }
-
-    async function checkAdminAndEnter(user) {
-        const { data: profile, error } = await supabaseClient
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (error) { denyAccess('Could not verify admin status: ' + error.message); return; }
-        if (!profile) { denyAccess('No profile row found for this account.'); return; }
-        if (!profile.is_admin) { denyAccess('This account is not an admin.'); return; }
-
-        hide('boot_screen'); hide('login_screen'); hide('access_denied');
-        show('admin_content');
-        loadStats();
-        loadPending();
-        loadUpgrades();
-    }
-
-    document.getElementById('login_btn').addEventListener('click', async () => {
-        document.getElementById('login_error').classList.add('hidden');
-        const email = document.getElementById('login_email').value.trim();
-        const password = document.getElementById('login_password').value;
-        if (!email || !password) { showLoginError('Enter both email and password.'); return; }
-
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) { showLoginError(error.message); return; }
-        checkAdminAndEnter(data.user);
-    });
-
-    document.getElementById('logout_btn').addEventListener('click', async () => {
-        await supabaseClient.auth.signOut();
-        location.reload();
-    });
 
     async function loadPending() {
         const { data, error } = await supabaseClient
@@ -218,9 +134,9 @@
         if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">Nothing waiting for review.</p>'; return; }
 
         list.innerHTML = data.map(p => `
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
-                <div class="flex items-center gap-sm sm:gap-md min-w-0">
-                    <div class="w-12 h-12 sm:w-14 sm:h-14 bg-surface-container-high rounded-lg overflow-hidden flex-shrink-0">
+            <div class="flex items-center justify-between gap-md p-sm border border-outline-variant/30 rounded-lg">
+                <div class="flex items-center gap-md min-w-0">
+                    <div class="w-14 h-14 bg-surface-container-high rounded-lg overflow-hidden flex-shrink-0">
                         ${p.image_urls && p.image_urls[0] ? `<img src="${p.image_urls[0]}" class="w-full h-full object-cover" />` : ''}
                     </div>
                     <div class="min-w-0">
@@ -229,8 +145,8 @@
                     </div>
                 </div>
                 <div class="flex gap-xs flex-shrink-0">
-                    <button class="flex-1 sm:flex-none bg-primary text-on-primary px-md py-2 sm:py-1 rounded-lg text-sm font-bold approve-btn" data-id="${p.id}">Approve</button>
-                    <button class="flex-1 sm:flex-none bg-error-container text-on-error-container px-md py-2 sm:py-1 rounded-lg text-sm font-bold reject-btn" data-id="${p.id}">Reject</button>
+                    <button class="bg-primary text-on-primary px-md py-1 rounded-lg text-sm font-bold approve-btn" data-id="${p.id}">Approve</button>
+                    <button class="bg-error-container text-on-error-container px-md py-1 rounded-lg text-sm font-bold reject-btn" data-id="${p.id}">Reject</button>
                 </div>
             </div>
         `).join('');
@@ -266,53 +182,6 @@
         document.getElementById('stat_pending').textContent = data.pending_products;
         document.getElementById('stat_approved').textContent = data.approved_products;
         document.getElementById('stat_orders').textContent = data.total_orders;
-        document.getElementById('stat_pending_upgrades').textContent = data.pending_upgrades;
-    }
-
-    async function loadUpgrades() {
-        const { data, error } = await supabaseClient
-            .from('plan_upgrade_requests')
-            .select('*, stores(store_name), profiles!seller_id(email)')
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true });
-
-        const list = document.getElementById('upgrades_list');
-        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
-        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">No upgrades waiting for confirmation.</p>'; return; }
-
-        list.innerHTML = data.map(r => `
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
-                <div class="min-w-0">
-                    <p class="font-label-md text-on-surface truncate">${r.stores ? r.stores.store_name : 'Unknown store'} — ${r.requested_plan.toUpperCase()}</p>
-                    <p class="text-label-sm text-on-surface-variant break-words">${r.profiles ? r.profiles.email : ''} · ₦${Number(r.amount).toLocaleString()} · ref: ${r.paystack_reference}</p>
-                </div>
-                <div class="flex gap-xs flex-shrink-0">
-                    <button class="flex-1 sm:flex-none bg-primary text-on-primary px-md py-2 sm:py-1 rounded-lg text-sm font-bold grant-btn" data-id="${r.id}">Grant Access</button>
-                    <button class="flex-1 sm:flex-none bg-error-container text-on-error-container px-md py-2 sm:py-1 rounded-lg text-sm font-bold reject-upgrade-btn" data-id="${r.id}">Reject</button>
-                </div>
-            </div>
-        `).join('');
-
-        list.querySelectorAll('.grant-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const { error } = await supabaseClient.rpc('admin_grant_plan_upgrade', { p_request_id: btn.getAttribute('data-id') });
-                if (error) { showError(error.message); return; }
-                showToast('Granted — seller notified.');
-                loadUpgrades();
-                loadStats();
-            });
-        });
-        list.querySelectorAll('.reject-upgrade-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const reason = prompt('Reason for rejection (shown to the seller, optional):');
-                if (reason === null) return;
-                const { error } = await supabaseClient.rpc('admin_reject_plan_upgrade', { p_request_id: btn.getAttribute('data-id'), p_reason: reason || null });
-                if (error) { showError(error.message); return; }
-                showToast('Rejected — seller notified.');
-                loadUpgrades();
-                loadStats();
-            });
-        });
     }
 
     document.getElementById('post_ann_btn').addEventListener('click', async () => {
@@ -329,20 +198,14 @@
     });
 
     async function init() {
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { denyAccess(); return; }
 
-        if (error && error.message !== 'Auth session missing!') {
-            denyAccess('Auth check failed: ' + error.message);
-            return;
-        }
+        const { data: profile } = await supabaseClient.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
+        if (!profile || !profile.is_admin) { denyAccess(); return; }
 
-        if (!user) {
-            hide('boot_screen');
-            show('login_screen');
-            return;
-        }
-
-        checkAdminAndEnter(user);
+        loadStats();
+        loadPending();
     }
 
     init();
