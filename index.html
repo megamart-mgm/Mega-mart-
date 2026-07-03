@@ -154,8 +154,9 @@
             font-size: 1.6rem;
             cursor: pointer;
             color: var(--color-green-primary);
-            z-index: 1002;
-            padding: 4px 8px;
+            z-index: 100000;
+            padding: 10px 12px;
+            position: relative;
         }
 
         .nav {
@@ -166,15 +167,20 @@
 
         .close-menu {
             display: none;
-            background: none;
+            background: var(--color-green-light);
             border: none;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             cursor: pointer;
             color: var(--color-text-dark);
             position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 1003;
+            top: max(16px, env(safe-area-inset-top));
+            right: 16px;
+            z-index: 100000;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
         }
 
         .nav a {
@@ -257,14 +263,15 @@
                 top: 0; left: 0;
                 width: 100%; height: 100%;
                 background-color: var(--color-white);
-                z-index: 1001;
+                z-index: 99998;
                 padding: 70px 25px 30px;
+                padding-top: max(70px, calc(env(safe-area-inset-top) + 60px));
                 overflow-y: auto;
                 gap: 0;
             }
 
             .nav.active { display: flex; }
-            .nav.active .close-menu { display: block; }
+            .nav.active .close-menu { display: flex; }
 
             .nav a {
                 padding: 14px 0;
@@ -826,7 +833,7 @@
                 <i class="fas fa-shopping-basket"></i> Mega Mart
             </div>
 
-            <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">
+            <button class="menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">
                 <i class="fas fa-bars"></i>
             </button>
 
@@ -835,17 +842,17 @@
                     <i class="fas fa-times"></i>
                 </button>
 
-                <a href="#how-it-works">How It Works</a>
-                <a href="#features">Pricing</a>
+                <a href="how.html">How It Works</a>
+                <a href="upgrade-plan.html">Pricing</a>
 
                 <div class="dropdown">
                     <button class="dropbtn">Features <i class="fas fa-chevron-down"></i></button>
                     <div class="dropdown-content">
-                        <a href="#what-you-can-sell">Sell Digital Products</a>
-                        <a href="#what-you-can-sell">Sell Physical Products</a>
-                        <a href="#features">Become an Affiliate Marketer</a>
-                        <a href="#what-you-can-sell">Hire Services</a>
-                        <a href="#what-you-can-sell">Sell Tickets</a>
+                        <a href="feature.html">Sell Digital Products</a>
+                        <a href="feature.html">Sell Physical Products</a>
+                        <a href="feature.html">Become an Affiliate Marketer</a>
+                        <a hreffeature.html">Hire Services</a>
+                        <a href="feature.html">Sell Tickets</a>
                     </div>
                 </div>
 
@@ -1077,22 +1084,22 @@
                     <div class="footer-col">
                         <h3>Products</h3>
                         <ul>
-                            <li><a href="#how-it-works">How It Works</a></li>
-                            <li><a href="#features">Features</a></li>
+                            <li><a href="how.html">How It Works</a></li>
+                            <li><a href="feature.html">Features</a></li>
                             <li><a href="upgrade-plan.html">Pricing</a></li>
-                            <li><a href="#features">Affiliate Program</a></li>
+                            <li><a href="feature.html">Affiliate Program</a></li>
                             <li><a href="#what-you-can-sell">Sell Courses</a></li>
-                            <li><a href="#show-love">Show Love</a></li>
-                            <li><a href="#what-you-can-sell">Tickets</a></li>
-                            <li><a href="#integrations">Integrations</a></li>
+                        
+                           
+                            
                         </ul>
                     </div>
                     <div class="footer-col">
                         <h3>Community</h3>
                         <ul>
-                            <li><a href="mailto:support@megamart.com">Support & Resources</a></li>
+                            <li><a href="mailto:dben61168@gmail.com">Support & Resources</a></li>
                             <li><a href="#learn">Blog</a></li>
-                            <li><a href="mailto:support@megamart.com">Helpdesk & Guides</a></li>
+                            <li><a href="mailto:dben61168@gmail.com">Helpdesk & Guides</a></li>
                             <li><a href="#learn">Creator Academy</a></li>
                             <li><a href="#learn">Free Product Templates</a></li>
                             <li><a href="mailto:support@megamart.com">Press & Media Kits</a></li>
@@ -1127,19 +1134,40 @@
         const menuToggle = document.getElementById('menuToggle');
         const closeMenu  = document.getElementById('closeMenu');
         const mainNav    = document.getElementById('mainNav');
+        const menuIcon   = menuToggle.querySelector('i');
 
         function openNav() {
             mainNav.classList.add('active');
             document.body.style.overflow = 'hidden';
+            menuIcon.classList.remove('fa-bars');
+            menuIcon.classList.add('fa-times');
+            menuToggle.setAttribute('aria-label', 'Close navigation');
+            menuToggle.setAttribute('aria-expanded', 'true');
         }
 
         function closeNav() {
             mainNav.classList.remove('active');
             document.body.style.overflow = '';
             document.querySelectorAll('.dropdown.active').forEach(d => d.classList.remove('active'));
+            menuIcon.classList.remove('fa-times');
+            menuIcon.classList.add('fa-bars');
+            menuToggle.setAttribute('aria-label', 'Open navigation');
+            menuToggle.setAttribute('aria-expanded', 'false');
         }
 
-        menuToggle.addEventListener('click', openNav);
+        // The hamburger button now TOGGLES: tapping it again (it morphs into
+        // an X while open) closes the menu. This is the fix — previously it
+        // only ever opened, so there was no way to close it from the same
+        // button a person naturally taps again.
+        function toggleNav() {
+            if (mainNav.classList.contains('active')) {
+                closeNav();
+            } else {
+                openNav();
+            }
+        }
+
+        menuToggle.addEventListener('click', toggleNav);
         closeMenu.addEventListener('click', closeNav);
 
         mainNav.querySelectorAll('a').forEach(link => {
@@ -1165,6 +1193,14 @@
             if (mainNav.classList.contains('active') &&
                 !mainNav.contains(e.target) &&
                 !menuToggle.contains(e.target)) {
+                closeNav();
+            }
+        });
+
+        // Escape key also closes the mobile menu (useful with a bluetooth
+        // keyboard, and harmless everywhere else)
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && mainNav.classList.contains('active')) {
                 closeNav();
             }
         });
