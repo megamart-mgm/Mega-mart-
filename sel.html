@@ -91,8 +91,9 @@
                     </a>
 </div>
 <div class="pt-md pb-xs px-sm text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Sales &amp; Customers</div>
-<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="messages.html">
-<span class="material-symbols-outlined">chat</span> Messages
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant justify-between" href="messages.html">
+<span class="flex items-center gap-sm"><span class="material-symbols-outlined">chat</span> Messages</span>
+<span class="hidden bg-primary text-on-primary text-xs font-bold min-w-[20px] h-5 rounded-full items-center justify-center px-1" id="messages_unread_badge"></span>
                 </a>
 <a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#all_sales">
 <span class="material-symbols-outlined">receipt_long</span> All Sales
@@ -333,6 +334,25 @@
         }
     }
 
+    async function loadUnreadMessagesBadge(userId) {
+        const { data } = await supabaseClient
+            .from('messages')
+            .select('conversation_id')
+            .is('read_at', null)
+            .neq('sender_id', userId);
+
+        const badge = document.getElementById('messages_unread_badge');
+        const count = (data || []).length;
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+        } else {
+            badge.classList.add('hidden');
+            badge.classList.remove('flex');
+        }
+    }
+
     async function loadDashboard() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
@@ -341,6 +361,7 @@
         }
 
         loadNotifications(user.id);
+        loadUnreadMessagesBadge(user.id);
 
         // Avatar initials
         const name = (user.user_metadata && user.user_metadata.full_name) || user.email || 'S';
