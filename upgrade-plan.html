@@ -195,39 +195,23 @@
             amount: amountNaira * 100, // kobo
             currency: 'NGN',
             ref: 'MEGAMART-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
-            metadata: { seller_id: currentUser.id, plan, billing_cycle: billingCycle },
+            metadata: { purpose: 'plan_upgrade', seller_id: currentUser.id, plan, billing_cycle: billingCycle },
             callback: function (response) {
-                handlePaymentSuccess(response.reference, plan, amountNaira, billingCycle);
+                handlePaymentSuccess(response.reference);
             },
             onClose: function () {}
         });
         handler.openIframe();
     }
 
-    async function handlePaymentSuccess(reference, plan, amountNaira, billingCycle) {
-        // Payment no longer auto-grants the plan. It creates a pending request
-        // that shows up on the admin Control Room for manual confirmation.
-        // NOTE: for production-grade security, verify the payment server-side
-        // (Edge Function calling Paystack's /transaction/verify with the SECRET
-        // key) before this insert even runs — a client-side callback alone can
-        // be spoofed. Worth adding once you have Edge Functions set up.
-        const { error } = await supabaseClient.from('plan_upgrade_requests').insert({
-            seller_id: currentUser.id,
-            store_id: store.id,
-            requested_plan: plan,
-            amount: amountNaira,
-            currency: 'NGN',
-            paystack_reference: reference,
-            billing_cycle: billingCycle
-        });
-
-        if (error) {
-            showError('Payment went through, but we could not record your request: ' + error.message + '. Please contact support with this reference: ' + reference);
-            return;
-        }
-
-        showToast('Payment received! Your upgrade is awaiting confirmation.');
-        setTimeout(() => { window.location.href = 'sel.html'; }, 2200);
+    function handlePaymentSuccess(reference) {
+        // We no longer write plan_upgrade_requests from the browser — that
+        // could be faked from dev tools without ever paying. Paystack's
+        // server-to-server webhook (see paystack-webhook Edge Function)
+        // verifies the payment and creates the pending request itself,
+        // usually within a second or two of this callback firing.
+        showToast('Payment received! Confirming with Paystack...');
+        setTimeout(() => { window.location.href = 'sel.html'; }, 2500);
     }
 
     init();
