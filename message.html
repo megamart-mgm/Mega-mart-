@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messages | Mega Mart</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = { darkMode: "class", theme: { extend: {
+        "colors": {
+          "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+          "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+          "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a"
+        },
+        "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px" }
+      }}}
+    </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .conv-item.active { background: #e5eeff; }
+    .bubble-mine { background: #006b2c; color: #fff; border-radius: 14px 14px 2px 14px; }
+    .bubble-theirs { background: #eff4ff; color: #0b1c30; border-radius: 14px 14px 14px 2px; }
+    #thread_panel.mobile-hidden { display: none; }
+    @media (min-width: 768px) { #thread_panel.mobile-hidden { display: flex; } }
+</style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
+<a class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high" href="#" id="back_link">arrow_back</a>
+<span class="font-bold text-primary text-xl">Messages</span>
+</header>
+
+<main class="pt-16 h-screen flex max-w-[1000px] mx-auto">
+
+<!-- Conversation list -->
+<aside class="w-full md:w-[320px] flex-shrink-0 border-r border-outline-variant/20 overflow-y-auto" id="conv_list_panel">
+<div id="conv_list" class="divide-y divide-outline-variant/10">
+<p class="p-md text-on-surface-variant">Loading conversations...</p>
+</div>
+</aside>
+
+<!-- Thread -->
+<section class="flex-1 flex-col mobile-hidden" id="thread_panel">
+<div class="flex items-center gap-sm px-md h-14 border-b border-outline-variant/20 bg-surface-container-lowest flex-shrink-0">
+<button class="material-symbols-outlined md:hidden text-on-surface-variant" id="mobile_back_btn">arrow_back</button>
+<div class="w-9 h-9 rounded-full bg-surface-container-high overflow-hidden flex items-center justify-center flex-shrink-0" id="thread_avatar">
+<span class="material-symbols-outlined text-tertiary">person</span>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-on-surface truncate" id="thread_name">Select a conversation</p>
+<p class="text-xs text-on-surface-variant truncate" id="thread_product"></p>
+</div>
+</div>
+
+<div class="flex-1 overflow-y-auto p-md space-y-sm" id="message_list"></div>
+
+<div class="p-sm border-t border-outline-variant/20 bg-surface-container-lowest flex-shrink-0 hidden" id="composer">
+<form class="flex gap-sm" id="message_form">
+<input class="flex-1 h-11 px-4 bg-surface-container-low border border-outline-variant rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20" id="message_input" placeholder="Type a message..." autocomplete="off"/>
+<button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center flex-shrink-0" type="submit">
+<span class="material-symbols-outlined">send</span>
+</button>
+</form>
+</div>
+</section>
+
+</main>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let activeConversation = null;
+    let messageChannel = null;
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function timeAgo(dateStr) {
+        if (!dateStr) return '';
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'now';
+        if (mins < 60) return mins + 'm';
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs + 'h';
+        return Math.floor(hrs / 24) + 'd';
+    }
+
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
+            return;
+        }
+        currentUser = user;
+
+        const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).maybeSingle();
+        document.getElementById('back_link').href = profile && profile.role === 'seller' ? 'sel.html' : 'store.html';
+
+        await loadConversations();
+
+        const params = new URLSearchParams(window.location.search);
+        const openId = params.get('conversation');
+        if (openId) openConversation(openId);
+    }
+
+    async function loadConversations() {
+        const { data, error } = await supabaseClient
+            .from('conversations')
+            .select('*, buyer:profiles!buyer_id(full_name), seller:profiles!seller_id(full_name), products(name, image_urls)')
+            .or(`buyer_id.eq.${currentUser.id},seller_id.eq.${currentUser.id}`)
+            .order('last_message_at', { ascending: false, nullsFirst: false });
+
+        const list = document.getElementById('conv_list');
+        if (error) { list.innerHTML = `<p class="p-md text-error">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="p-md text-on-surface-variant">No conversations yet.</p>'; return; }
+
+        list.innerHTML = data.map(c => {
+            const isBuyer = c.buyer_id === currentUser.id;
+            const otherName = isBuyer ? (c.seller?.full_name || 'Seller') : (c.buyer?.full_name || 'Buyer');
+            const productName = c.products?.name || '';
+            const thumb = c.products?.image_urls?.[0];
+            return `
+                <button class="conv-item w-full text-left p-md flex items-center gap-sm hover:bg-surface-container-low transition-colors" data-id="${c.id}">
+                    <div class="w-11 h-11 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        ${thumb ? `<img src="${thumb}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-tertiary">person</span>'}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex justify-between items-baseline gap-sm">
+                            <p class="font-bold text-on-surface truncate">${escapeHtml(otherName)}</p>
+                            <span class="text-xs text-on-surface-variant flex-shrink-0">${timeAgo(c.last_message_at)}</span>
+                        </div>
+                        <p class="text-sm text-on-surface-variant truncate">${escapeHtml(c.last_message || 'Say hello about ' + productName)}</p>
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        list.querySelectorAll('.conv-item').forEach(btn => {
+            btn.addEventListener('click', () => openConversation(btn.getAttribute('data-id')));
+        });
+    }
+
+    async function openConversation(conversationId) {
+        activeConversation = conversationId;
+
+        document.querySelectorAll('.conv-item').forEach(el => {
+            el.classList.toggle('active', el.getAttribute('data-id') === conversationId);
+        });
+
+        document.getElementById('conv_list_panel').classList.add('hidden');
+        document.getElementById('conv_list_panel').classList.add('md:block');
+        document.getElementById('thread_panel').classList.remove('mobile-hidden');
+        document.getElementById('thread_panel').style.display = 'flex';
+
+        const { data: conv } = await supabaseClient
+            .from('conversations')
+            .select('*, buyer:profiles!buyer_id(full_name), seller:profiles!seller_id(full_name), products(name)')
+            .eq('id', conversationId)
+            .maybeSingle();
+
+        if (conv) {
+            const isBuyer = conv.buyer_id === currentUser.id;
+            document.getElementById('thread_name').textContent = isBuyer ? (conv.seller?.full_name || 'Seller') : (conv.buyer?.full_name || 'Buyer');
+            document.getElementById('thread_product').textContent = conv.products?.name ? 'About: ' + conv.products.name : '';
+        }
+
+        document.getElementById('composer').classList.remove('hidden');
+
+        await loadMessages(conversationId);
+        subscribeToConversation(conversationId);
+    }
+
+    async function loadMessages(conversationId) {
+        const { data, error } = await supabaseClient
+            .from('messages')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: true });
+
+        const list = document.getElementById('message_list');
+        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
+
+        list.innerHTML = (data || []).map(renderBubble).join('');
+        list.scrollTop = list.scrollHeight;
+
+        // Mark incoming messages as read
+        const unreadIds = (data || []).filter(m => m.sender_id !== currentUser.id && !m.read_at).map(m => m.id);
+        if (unreadIds.length > 0) {
+            await supabaseClient.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds);
+        }
+    }
+
+    function renderBubble(m) {
+        const mine = m.sender_id === currentUser.id;
+        const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `
+            <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
+                <div class="max-w-[75%] px-4 py-2 ${mine ? 'bubble-mine' : 'bubble-theirs'}">
+                    <p class="text-sm whitespace-pre-wrap break-words">${escapeHtml(m.body)}</p>
+                    <p class="text-[10px] mt-1 opacity-70">${time}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    function subscribeToConversation(conversationId) {
+        if (messageChannel) supabaseClient.removeChannel(messageChannel);
+
+        messageChannel = supabaseClient
+            .channel('messages-' + conversationId)
+            .on('postgres_changes', {
+                event: 'INSERT', schema: 'public', table: 'messages',
+                filter: `conversation_id=eq.${conversationId}`
+            }, (payload) => {
+                const list = document.getElementById('message_list');
+                list.insertAdjacentHTML('beforeend', renderBubble(payload.new));
+                list.scrollTop = list.scrollHeight;
+                if (payload.new.sender_id !== currentUser.id) {
+                    supabaseClient.from('messages').update({ read_at: new Date().toISOString() }).eq('id', payload.new.id);
+                }
+                loadConversations(); // refresh preview/order in the list
+            })
+            .subscribe();
+    }
+
+    document.getElementById('message_form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const input = document.getElementById('message_input');
+        const body = input.value.trim();
+        if (!body || !activeConversation) return;
+
+        input.value = '';
+        const { error } = await supabaseClient.from('messages').insert({
+            conversation_id: activeConversation,
+            sender_id: currentUser.id,
+            body
+        });
+        if (error) alert('Could not send message: ' + error.message);
+    });
+
+    document.getElementById('mobile_back_btn').addEventListener('click', () => {
+        document.getElementById('thread_panel').style.display = 'none';
+        document.getElementById('conv_list_panel').classList.remove('hidden');
+    });
+
+    init();
+</script>
+</body></html>
