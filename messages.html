@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html class="light" lang="en"><head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Messages | Mega Mart</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script id="tailwind-config">
       tailwind.config = { darkMode: "class", theme: { extend: {
@@ -19,35 +19,38 @@
       }}}
     </script>
 <style>
+    html, body { height: 100%; overflow: hidden; }
     body { font-family: 'Inter', sans-serif; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
     .conv-item.active { background: #e5eeff; }
     .bubble-mine { background: #006b2c; color: #fff; border-radius: 14px 14px 2px 14px; }
     .bubble-theirs { background: #eff4ff; color: #0b1c30; border-radius: 14px 14px 14px 2px; }
-    #thread_panel.mobile-hidden { display: none; }
-    @media (min-width: 768px) { #thread_panel.mobile-hidden { display: flex; } }
+    #toast { display: none; }
+    #toast.active { display: flex; }
+    .unread-dot { background: #006b2c; color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0 5px; }
+    #composer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 </style>
 </head>
-<body class="bg-background text-on-background min-h-screen">
+<body class="bg-background text-on-background">
 
-<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
-<a class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high" href="#" id="back_link">arrow_back</a>
-<span class="font-bold text-primary text-xl">Messages</span>
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-sm sm:px-md h-14 shadow-sm bg-surface">
+<a class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high flex-shrink-0" href="#" id="back_link">arrow_back</a>
+<span class="font-bold text-primary text-lg sm:text-xl truncate">Messages</span>
 </header>
 
-<main class="pt-16 h-screen flex max-w-[1000px] mx-auto">
+<main class="pt-14 h-[100dvh] flex max-w-[1000px] mx-auto">
 
 <!-- Conversation list -->
-<aside class="w-full md:w-[320px] flex-shrink-0 border-r border-outline-variant/20 overflow-y-auto" id="conv_list_panel">
+<aside class="w-full md:w-[320px] flex-shrink-0 border-r border-outline-variant/20 overflow-y-auto h-full" id="conv_list_panel">
 <div id="conv_list" class="divide-y divide-outline-variant/10">
 <p class="p-md text-on-surface-variant">Loading conversations...</p>
 </div>
 </aside>
 
 <!-- Thread -->
-<section class="flex-1 flex-col mobile-hidden" id="thread_panel">
-<div class="flex items-center gap-sm px-md h-14 border-b border-outline-variant/20 bg-surface-container-lowest flex-shrink-0">
-<button class="material-symbols-outlined md:hidden text-on-surface-variant" id="mobile_back_btn">arrow_back</button>
+<section class="hidden md:flex flex-1 flex-col h-full min-w-0" id="thread_panel">
+<div class="flex items-center gap-sm px-sm sm:px-md h-14 border-b border-outline-variant/20 bg-surface-container-lowest flex-shrink-0">
+<button class="material-symbols-outlined md:hidden text-on-surface-variant flex-shrink-0" id="mobile_back_btn">arrow_back</button>
 <div class="w-9 h-9 rounded-full bg-surface-container-high overflow-hidden flex items-center justify-center flex-shrink-0" id="thread_avatar">
 <span class="material-symbols-outlined text-tertiary">person</span>
 </div>
@@ -57,11 +60,11 @@
 </div>
 </div>
 
-<div class="flex-1 overflow-y-auto p-md space-y-sm" id="message_list"></div>
+<div class="flex-1 overflow-y-auto p-sm sm:p-md space-y-sm" id="message_list"></div>
 
 <div class="p-sm border-t border-outline-variant/20 bg-surface-container-lowest flex-shrink-0 hidden" id="composer">
 <form class="flex gap-sm" id="message_form">
-<input class="flex-1 h-11 px-4 bg-surface-container-low border border-outline-variant rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20" id="message_input" placeholder="Type a message..." autocomplete="off"/>
+<input class="flex-1 min-w-0 h-11 px-4 bg-surface-container-low border border-outline-variant rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20" id="message_input" placeholder="Type a message..." autocomplete="off"/>
 <button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center flex-shrink-0" type="submit">
 <span class="material-symbols-outlined">send</span>
 </button>
@@ -71,6 +74,11 @@
 
 </main>
 
+<div class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-[60] max-w-[92vw]" id="toast">
+<span class="material-symbols-outlined text-primary flex-shrink-0">chat</span>
+<span class="font-medium text-sm truncate" id="toast_text"></span>
+</div>
+
 <script>
     const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
@@ -79,7 +87,8 @@
 
     let currentUser = null;
     let activeConversation = null;
-    let messageChannel = null;
+    let globalChannel = null;
+    let conversationCache = {}; // id -> { otherName, productName }
 
     function escapeHtml(str) {
         const div = document.createElement('div');
@@ -98,6 +107,34 @@
         return Math.floor(hrs / 24) + 'd';
     }
 
+    function showToast(msg) {
+        document.getElementById('toast_text').textContent = msg;
+        const t = document.getElementById('toast');
+        t.classList.add('active');
+        setTimeout(() => t.classList.remove('active'), 3500);
+    }
+
+    function updateTitleBadge(unreadTotal) {
+        document.title = unreadTotal > 0 ? `(${unreadTotal}) Messages | Mega Mart` : 'Messages | Mega Mart';
+    }
+
+    // ---- Mobile-safe panel switching (single source of truth, no CSS/JS fights) ----
+    function isMobile() {
+        return window.innerWidth < 768;
+    }
+    function showThreadPane() {
+        document.getElementById('thread_panel').classList.remove('hidden');
+        document.getElementById('thread_panel').classList.add('flex');
+        if (isMobile()) document.getElementById('conv_list_panel').classList.add('hidden');
+    }
+    function showListPane() {
+        document.getElementById('conv_list_panel').classList.remove('hidden');
+        if (isMobile()) {
+            document.getElementById('thread_panel').classList.add('hidden');
+            document.getElementById('thread_panel').classList.remove('flex');
+        }
+    }
+
     async function init() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
@@ -110,10 +147,23 @@
         document.getElementById('back_link').href = profile && profile.role === 'seller' ? 'sel.html' : 'store.html';
 
         await loadConversations();
+        subscribeGlobally();
 
         const params = new URLSearchParams(window.location.search);
         const openId = params.get('conversation');
         if (openId) openConversation(openId);
+    }
+
+    async function getUnreadCounts() {
+        const { data } = await supabaseClient
+            .from('messages')
+            .select('conversation_id')
+            .is('read_at', null)
+            .neq('sender_id', currentUser.id);
+
+        const counts = {};
+        (data || []).forEach(m => { counts[m.conversation_id] = (counts[m.conversation_id] || 0) + 1; });
+        return counts;
     }
 
     async function loadConversations() {
@@ -125,15 +175,23 @@
 
         const list = document.getElementById('conv_list');
         if (error) { list.innerHTML = `<p class="p-md text-error">${error.message}</p>`; return; }
-        if (!data || data.length === 0) { list.innerHTML = '<p class="p-md text-on-surface-variant">No conversations yet.</p>'; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="p-md text-on-surface-variant">No conversations yet.</p>'; updateTitleBadge(0); return; }
+
+        const unreadCounts = await getUnreadCounts();
+        let totalUnread = 0;
 
         list.innerHTML = data.map(c => {
             const isBuyer = c.buyer_id === currentUser.id;
             const otherName = isBuyer ? (c.seller?.full_name || 'Seller') : (c.buyer?.full_name || 'Buyer');
             const productName = c.products?.name || '';
             const thumb = c.products?.image_urls?.[0];
+            const unread = unreadCounts[c.id] || 0;
+            totalUnread += unread;
+
+            conversationCache[c.id] = { otherName, productName };
+
             return `
-                <button class="conv-item w-full text-left p-md flex items-center gap-sm hover:bg-surface-container-low transition-colors" data-id="${c.id}">
+                <button class="conv-item w-full text-left p-sm sm:p-md flex items-center gap-sm hover:bg-surface-container-low transition-colors" data-id="${c.id}">
                     <div class="w-11 h-11 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
                         ${thumb ? `<img src="${thumb}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-tertiary">person</span>'}
                     </div>
@@ -142,11 +200,16 @@
                             <p class="font-bold text-on-surface truncate">${escapeHtml(otherName)}</p>
                             <span class="text-xs text-on-surface-variant flex-shrink-0">${timeAgo(c.last_message_at)}</span>
                         </div>
-                        <p class="text-sm text-on-surface-variant truncate">${escapeHtml(c.last_message || 'Say hello about ' + productName)}</p>
+                        <div class="flex justify-between items-center gap-sm">
+                            <p class="text-sm text-on-surface-variant truncate">${escapeHtml(c.last_message || 'Say hello about ' + productName)}</p>
+                            ${unread > 0 ? `<span class="unread-dot flex-shrink-0">${unread}</span>` : ''}
+                        </div>
                     </div>
                 </button>
             `;
         }).join('');
+
+        updateTitleBadge(totalUnread);
 
         list.querySelectorAll('.conv-item').forEach(btn => {
             btn.addEventListener('click', () => openConversation(btn.getAttribute('data-id')));
@@ -160,27 +223,18 @@
             el.classList.toggle('active', el.getAttribute('data-id') === conversationId);
         });
 
-        document.getElementById('conv_list_panel').classList.add('hidden');
-        document.getElementById('conv_list_panel').classList.add('md:block');
-        document.getElementById('thread_panel').classList.remove('mobile-hidden');
-        document.getElementById('thread_panel').style.display = 'flex';
+        showThreadPane();
 
-        const { data: conv } = await supabaseClient
-            .from('conversations')
-            .select('*, buyer:profiles!buyer_id(full_name), seller:profiles!seller_id(full_name), products(name)')
-            .eq('id', conversationId)
-            .maybeSingle();
-
-        if (conv) {
-            const isBuyer = conv.buyer_id === currentUser.id;
-            document.getElementById('thread_name').textContent = isBuyer ? (conv.seller?.full_name || 'Seller') : (conv.buyer?.full_name || 'Buyer');
-            document.getElementById('thread_product').textContent = conv.products?.name ? 'About: ' + conv.products.name : '';
+        const cached = conversationCache[conversationId];
+        if (cached) {
+            document.getElementById('thread_name').textContent = cached.otherName;
+            document.getElementById('thread_product').textContent = cached.productName ? 'About: ' + cached.productName : '';
         }
 
         document.getElementById('composer').classList.remove('hidden');
 
         await loadMessages(conversationId);
-        subscribeToConversation(conversationId);
+        await loadConversations(); // refresh unread badges now that this thread is being read
     }
 
     async function loadMessages(conversationId) {
@@ -196,7 +250,6 @@
         list.innerHTML = (data || []).map(renderBubble).join('');
         list.scrollTop = list.scrollHeight;
 
-        // Mark incoming messages as read
         const unreadIds = (data || []).filter(m => m.sender_id !== currentUser.id && !m.read_at).map(m => m.id);
         if (unreadIds.length > 0) {
             await supabaseClient.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds);
@@ -208,7 +261,7 @@
         const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return `
             <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
-                <div class="max-w-[75%] px-4 py-2 ${mine ? 'bubble-mine' : 'bubble-theirs'}">
+                <div class="max-w-[85%] sm:max-w-[75%] px-4 py-2 ${mine ? 'bubble-mine' : 'bubble-theirs'}">
                     <p class="text-sm whitespace-pre-wrap break-words">${escapeHtml(m.body)}</p>
                     <p class="text-[10px] mt-1 opacity-70">${time}</p>
                 </div>
@@ -216,22 +269,33 @@
         `;
     }
 
-    function subscribeToConversation(conversationId) {
-        if (messageChannel) supabaseClient.removeChannel(messageChannel);
+    // ---- ONE global subscription for every message the user is allowed to
+    // see (RLS restricts this automatically to their own conversations) —
+    // this is what actually delivers the "you've got a new message" alert,
+    // whether it's for the open thread or any other conversation. ----
+    function subscribeGlobally() {
+        if (globalChannel) supabaseClient.removeChannel(globalChannel);
 
-        messageChannel = supabaseClient
-            .channel('messages-' + conversationId)
-            .on('postgres_changes', {
-                event: 'INSERT', schema: 'public', table: 'messages',
-                filter: `conversation_id=eq.${conversationId}`
-            }, (payload) => {
-                const list = document.getElementById('message_list');
-                list.insertAdjacentHTML('beforeend', renderBubble(payload.new));
-                list.scrollTop = list.scrollHeight;
-                if (payload.new.sender_id !== currentUser.id) {
-                    supabaseClient.from('messages').update({ read_at: new Date().toISOString() }).eq('id', payload.new.id);
+        globalChannel = supabaseClient
+            .channel('messages-all')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
+                const msg = payload.new;
+                if (msg.sender_id === currentUser.id) return; // our own message, already rendered on send
+
+                if (msg.conversation_id === activeConversation && !document.getElementById('thread_panel').classList.contains('hidden')) {
+                    // Currently viewing this exact thread — just append it
+                    const list = document.getElementById('message_list');
+                    list.insertAdjacentHTML('beforeend', renderBubble(msg));
+                    list.scrollTop = list.scrollHeight;
+                    await supabaseClient.from('messages').update({ read_at: new Date().toISOString() }).eq('id', msg.id);
+                } else {
+                    // A different conversation (or messages.html not focused on it) — alert
+                    const cached = conversationCache[msg.conversation_id];
+                    const name = cached ? cached.otherName : 'someone';
+                    showToast(`New message from ${name}`);
                 }
-                loadConversations(); // refresh preview/order in the list
+
+                await loadConversations();
             })
             .subscribe();
     }
@@ -243,17 +307,28 @@
         if (!body || !activeConversation) return;
 
         input.value = '';
-        const { error } = await supabaseClient.from('messages').insert({
+        const { data, error } = await supabaseClient.from('messages').insert({
             conversation_id: activeConversation,
             sender_id: currentUser.id,
             body
-        });
-        if (error) alert('Could not send message: ' + error.message);
+        }).select().maybeSingle();
+
+        if (error) { alert('Could not send message: ' + error.message); return; }
+
+        const list = document.getElementById('message_list');
+        list.insertAdjacentHTML('beforeend', renderBubble(data));
+        list.scrollTop = list.scrollHeight;
     });
 
-    document.getElementById('mobile_back_btn').addEventListener('click', () => {
-        document.getElementById('thread_panel').style.display = 'none';
-        document.getElementById('conv_list_panel').classList.remove('hidden');
+    document.getElementById('mobile_back_btn').addEventListener('click', showListPane);
+
+    // Keep panel state sane if the phone is rotated / window resized
+    window.addEventListener('resize', () => {
+        if (!isMobile()) {
+            document.getElementById('conv_list_panel').classList.remove('hidden');
+            document.getElementById('thread_panel').classList.remove('hidden');
+            if (activeConversation) document.getElementById('thread_panel').classList.add('flex');
+        }
     });
 
     init();
