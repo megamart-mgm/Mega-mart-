@@ -48,6 +48,10 @@
 <header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-md h-16 shadow-sm bg-surface">
 <h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary tracking-tight">Mega Mart</h1>
 <div class="flex items-center gap-sm">
+<a class="relative text-primary p-2 rounded-full hover:bg-surface-container-high" href="messages.html" id="messages_link">
+<span class="material-symbols-outlined">chat</span>
+<span class="hidden absolute -top-1 -right-1 bg-error text-on-error text-[10px] font-bold min-w-[16px] h-4 rounded-full items-center justify-center px-1" id="messages_unread_badge"></span>
+</a>
 <a class="text-primary text-label-md font-bold hover:underline" href="login.html">Log In</a>
 </div>
 </header>
@@ -542,7 +546,27 @@
         applyFilters();
     }
 
+    async function loadMessagesBadge() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabaseClient
+            .from('messages')
+            .select('conversation_id')
+            .is('read_at', null)
+            .neq('sender_id', user.id);
+
+        const badge = document.getElementById('messages_unread_badge');
+        const count = (data || []).length;
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+        }
+    }
+
     loadAnnouncement();
     loadProducts();
+    loadMessagesBadge();
 </script>
 </body></html>
