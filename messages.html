@@ -252,18 +252,34 @@
 
         const unreadIds = (data || []).filter(m => m.sender_id !== currentUser.id && !m.read_at).map(m => m.id);
         if (unreadIds.length > 0) {
-            await supabaseClient.from('messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds);
+            await supabaseClient.from('messages').update({
+                read_at: new Date().toISOString(),
+                delivered_at: new Date().toISOString()
+            }).in('id', unreadIds);
         }
+
+        // Anything from the other person that reached us but wasn't opened
+        // yet still counts as "delivered" the moment we fetched it.
+        const undeliveredIds = (data || []).filter(m => m.sender_id !== currentUser.id && !m.delivered_at && !unreadIds.includes(m.id)).map(m => m.id);
+        if (undeliveredIds.length > 0) {
+            await supabaseClient.from('messages').update({ delivered_at: new Date().toISOString() }).in('id', undeliveredIds);
+        }
+    }
+
+    function statusLabel(m) {
+        if (m.read_at) return 'Seen';
+        if (m.delivered_at) return 'Delivered';
+        return 'Sent';
     }
 
     function renderBubble(m) {
         const mine = m.sender_id === currentUser.id;
         const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return `
-            <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
+            <div class="flex ${mine ? 'justify-end' : 'justify-start'}" data-message-id="${m.id}">
                 <div class="max-w-[85%] sm:max-w-[75%] px-4 py-2 ${mine ? 'bubble-mine' : 'bubble-theirs'}">
                     <p class="text-sm whitespace-pre-wrap break-words">${escapeHtml(m.body)}</p>
-                    <p class="text-[10px] mt-1 opacity-70">${time}</p>
+                    <p class="text-[10px] mt-1 opacity-70">${time}${mine ? ' · <span class="status-label">' + statusLabel(m) + '</span>' : ''}</p>
                 </div>
             </div>
         `;
@@ -282,20 +298,33 @@
                 const msg = payload.new;
                 if (msg.sender_id === currentUser.id) return; // our own message, already rendered on send
 
-                if (msg.conversation_id === activeConversation && !document.getElementById('thread_panel').classList.contains('hidden')) {
-                    // Currently viewing this exact thread — just append it
+                const openOnThisThread = msg.conversation_id === activeConversation
+                    && !document.getElementById('thread_panel').classList.contains('hidden');
+
+                if (openOnThisThread) {
+                    // Currently viewing this exact thread — append + it's instantly "Seen"
                     const list = document.getElementById('message_list');
                     list.insertAdjacentHTML('beforeend', renderBubble(msg));
                     list.scrollTop = list.scrollHeight;
-                    await supabaseClient.from('messages').update({ read_at: new Date().toISOString() }).eq('id', msg.id);
+                    await supabaseClient.from('messages').update({
+                        read_at: new Date().toISOString(),
+                        delivered_at: new Date().toISOString()
+                    }).eq('id', msg.id);
                 } else {
-                    // A different conversation (or messages.html not focused on it) — alert
+                    // Our client received it live while online — that's "Delivered"
+                    await supabaseClient.from('messages').update({ delivered_at: new Date().toISOString() }).eq('id', msg.id);
                     const cached = conversationCache[msg.conversation_id];
                     const name = cached ? cached.otherName : 'someone';
                     showToast(`New message from ${name}`);
                 }
 
                 await loadConversations();
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
+                const msg = payload.new;
+                if (msg.sender_id !== currentUser.id) return; // only track status of MY sent messages
+                const row = document.querySelector(`[data-message-id="${msg.id}"] .status-label`);
+                if (row) row.textContent = statusLabel(msg);
             })
             .subscribe();
     }
