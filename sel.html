@@ -66,6 +66,16 @@
 </div>
 <div class="flex items-center gap-sm">
 <span class="hidden md:inline-block text-label-sm font-label-sm px-3 py-1 rounded-full plan-badge-free" id="plan_badge">Free Plan</span>
+<div class="relative" id="notif_bell_wrap">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95 relative" id="notif_bell_btn">
+notifications
+<span class="hidden absolute -top-0.5 -right-0.5 bg-error text-on-error text-[10px] font-bold min-w-[18px] h-[18px] rounded-full items-center justify-center px-1" id="notif_bell_badge"></span>
+</button>
+<div class="hidden absolute right-0 mt-2 w-80 max-w-[85vw] bg-white rounded-xl shadow-xl border border-outline-variant/20 max-h-[70vh] overflow-y-auto z-[70]" id="notif_dropdown">
+<p class="p-md text-center text-on-surface-variant text-sm hidden" id="notif_dropdown_empty">You're all caught up.</p>
+<div id="notif_dropdown_list"></div>
+</div>
+</div>
 <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs" id="avatar_initials">SA</div>
 </div>
 </header>
@@ -91,9 +101,8 @@
                     </a>
 </div>
 <div class="pt-md pb-xs px-sm text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Sales &amp; Customers</div>
-<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant justify-between" href="messages.html">
-<span class="flex items-center gap-sm"><span class="material-symbols-outlined">chat</span> Messages</span>
-<span class="hidden bg-primary text-on-primary text-xs font-bold min-w-[20px] h-5 rounded-full items-center justify-center px-1" id="messages_unread_badge"></span>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="messages.html">
+<span class="material-symbols-outlined">chat</span> Messages
                 </a>
 <a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#all_sales">
 <span class="material-symbols-outlined">receipt_long</span> All Sales
@@ -334,23 +343,102 @@
         }
     }
 
-    async function loadUnreadMessagesBadge(userId) {
-        const { data } = await supabaseClient
+    async function loadBellNotifications(userId) {
+        const { data: notifRows } = await supabaseClient
+            .from('notifications')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_read', false)
+            .order('created_at', { ascending: false });
+
+        const { data: unreadMsgs } = await supabaseClient
             .from('messages')
-            .select('conversation_id')
+            .select('conversation_id, created_at')
             .is('read_at', null)
             .neq('sender_id', userId);
 
-        const badge = document.getElementById('messages_unread_badge');
-        const count = (data || []).length;
-        if (count > 0) {
-            badge.textContent = count > 99 ? '99+' : count;
+        const convMap = {};
+        (unreadMsgs || []).forEach(m => {
+            if (!convMap[m.conversation_id]) convMap[m.conversation_id] = { count: 0, latest: m.created_at };
+            convMap[m.conversation_id].count++;
+            if (m.created_at > convMap[m.conversation_id].latest) convMap[m.conversation_id].latest = m.created_at;
+        });
+
+        let convEntries = [];
+        const convIds = Object.keys(convMap);
+        if (convIds.length > 0) {
+            const { data: convs } = await supabaseClient
+                .from('conversations')
+                .select('id, buyer_id, buyer:profiles!buyer_id(full_name)')
+                .in('id', convIds);
+            convEntries = (convs || []).map(c => ({
+                type: 'message',
+                id: c.id,
+                text: `${convMap[c.id].count} new message${convMap[c.id].count > 1 ? 's' : ''} from ${c.buyer?.full_name || 'a buyer'}`,
+                created_at: convMap[c.id].latest
+            }));
+        }
+
+        const notifEntries = (notifRows || []).map(n => ({ type: 'notification', id: n.id, text: n.message, created_at: n.created_at }));
+        const combined = [...notifEntries, ...convEntries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        const badge = document.getElementById('notif_bell_badge');
+        const totalCount = (notifRows ? notifRows.length : 0) + (unreadMsgs ? unreadMsgs.length : 0);
+        if (totalCount > 0) {
+            badge.textContent = totalCount > 99 ? '99+' : totalCount;
             badge.classList.remove('hidden');
             badge.classList.add('flex');
         } else {
             badge.classList.add('hidden');
             badge.classList.remove('flex');
         }
+
+        const list = document.getElementById('notif_dropdown_list');
+        const emptyEl = document.getElementById('notif_dropdown_empty');
+        if (combined.length === 0) {
+            list.innerHTML = '';
+            emptyEl.classList.remove('hidden');
+            return;
+        }
+        emptyEl.classList.add('hidden');
+
+        list.innerHTML = combined.map(e => `
+            <button class="w-full text-left p-md hover:bg-surface-container-low border-b border-outline-variant/10 flex items-start gap-sm notif-item" data-type="${e.type}" data-id="${e.id}">
+                <span class="material-symbols-outlined text-primary text-lg flex-shrink-0">${e.type === 'message' ? 'chat' : 'notifications'}</span>
+                <span class="text-sm text-on-surface flex-1">${e.text.replace(/</g, '&lt;')}</span>
+            </button>
+        `).join('');
+
+        list.querySelectorAll('.notif-item').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const type = btn.getAttribute('data-type');
+                const id = btn.getAttribute('data-id');
+                if (type === 'notification') {
+                    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
+                    loadBellNotifications(userId);
+                } else {
+                    window.location.href = 'messages.html?conversation=' + id;
+                }
+            });
+        });
+    }
+
+    document.getElementById('notif_bell_btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('notif_dropdown').classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('notif_bell_wrap').contains(e.target)) {
+            document.getElementById('notif_dropdown').classList.add('hidden');
+        }
+    });
+
+    function subscribeBellRealtime(userId) {
+        supabaseClient
+            .channel('bell-notifications')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => loadBellNotifications(userId))
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, () => loadBellNotifications(userId))
+            .subscribe();
     }
 
     async function loadDashboard() {
@@ -361,7 +449,8 @@
         }
 
         loadNotifications(user.id);
-        loadUnreadMessagesBadge(user.id);
+        loadBellNotifications(user.id);
+        subscribeBellRealtime(user.id);
 
         // Avatar initials
         const name = (user.user_metadata && user.user_metadata.full_name) || user.email || 'S';
