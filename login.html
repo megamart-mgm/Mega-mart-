@@ -98,6 +98,15 @@
             return;
         }
 
+        // If we were sent here from another page (e.g. "log in to contact a
+        // seller"), go back there instead of the default landing page.
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect');
+        if (redirect) {
+            window.location.href = redirect;
+            return;
+        }
+
         if (profile.role === 'seller') {
             window.location.href = 'sel.html';
         } else {
