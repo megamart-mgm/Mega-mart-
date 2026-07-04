@@ -13,10 +13,16 @@
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 
-// Change this once your domain is verified in Resend. Until then, Resend's
-// sandbox "onboarding@resend.dev" sender works for testing but looks less
-// professional and has stricter sending limits.
-const FROM_ADDRESS = "Mega Mart <welcome@megamart.ng>";
+// Until you verify your own domain in Resend, "from" must stay on Resend's
+// sandbox address — Resend can't send as a @gmail.com address (Gmail's own
+// anti-spoofing rules block it, and Resend has no DNS control over gmail.com
+// to prove it's not spam). Replies are routed to your Gmail via reply-to, so
+// you'll still get anything a person sends back in the meantime.
+const FROM_ADDRESS = "Mega Mart <onboarding@resend.dev>";
+const REPLY_TO_ADDRESS = "dben61168@gmail.com";
+// Once you buy a domain and verify it in Resend, change FROM_ADDRESS to
+// something like "Mega Mart <welcome@yourdomain.com>" and you can remove
+// REPLY_TO_ADDRESS entirely if you want replies to go to that same inbox.
 
 function buyerEmailHtml(firstName: string): string {
   return `
@@ -78,6 +84,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: FROM_ADDRESS,
         to: email,
+        reply_to: REPLY_TO_ADDRESS,
         subject,
         html,
       }),
