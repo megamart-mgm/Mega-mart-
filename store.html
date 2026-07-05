@@ -10,6 +10,13 @@
 <meta content="Mega Mart - Shop Nigeria's Online Marketplace" property="og:title"/>
 <meta content="Discover digital products, physical goods and services from verified Nigerian sellers." property="og:description"/>
 <meta content="website" property="og:type"/>
+<meta content="https://YOUR-DOMAIN-HERE/assets/mega-mart-logo.png" property="og:image"/>
+<meta content="1200" property="og:image:width"/>
+<meta content="630" property="og:image:height"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="Mega Mart - Shop Nigeria's Online Marketplace" name="twitter:title"/>
+<meta content="Discover digital products, physical goods and services from verified Nigerian sellers." name="twitter:description"/>
+<meta content="https://YOUR-DOMAIN-HERE/assets/mega-mart-logo.png" name="twitter:image"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -144,10 +151,13 @@ notifications
 </div>
 
 <div class="flex items-center gap-2 p-sm bg-surface-container-low rounded-xl">
-<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high flex items-center justify-center flex-shrink-0" id="detail_store_logo"></div>
-<div class="min-w-0">
+<div class="relative flex-shrink-0">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high flex items-center justify-center" id="detail_store_logo"></div>
+<span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white" id="detail_presence_dot" style="background:#8d6e63;" title="Offline"></span>
+</div>
+<div class="min-w-0 flex items-center gap-1">
 <p class="font-label-md text-on-surface truncate" id="detail_store_name"></p>
-<p class="text-xs text-on-surface-variant">Listed by this seller on Mega Mart</p>
+<span class="hidden material-symbols-outlined text-primary text-[16px]" id="detail_verified_badge" title="Verified Seller" style="font-variation-settings: 'FILL' 1;">verified</span>
 </div>
 </div>
 
@@ -158,6 +168,31 @@ notifications
 <button class="w-full h-12 bg-primary text-on-primary rounded-lg font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform" id="detail_chat_btn">
 <span class="material-symbols-outlined">chat</span> Contact Seller
 </button>
+
+<!-- Ratings & Reviews -->
+<div class="border-t border-outline-variant/20 pt-md space-y-md">
+<div class="flex items-center justify-between">
+<h3 class="font-bold text-on-surface">Ratings &amp; Reviews</h3>
+<div class="hidden items-center gap-1" id="detail_rating_summary">
+<span class="text-yellow-500" id="detail_rating_stars"></span>
+<span class="text-sm text-on-surface-variant" id="detail_rating_text"></span>
+</div>
+</div>
+
+<div id="review_form_wrap">
+<div class="flex items-center gap-1 mb-xs" id="review_star_picker">
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="1">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="2">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="3">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="4">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="5">star</button>
+</div>
+<textarea class="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm" id="review_comment_input" placeholder="Share your experience with this product (optional)" rows="2"></textarea>
+<button class="mt-xs bg-primary text-on-primary px-md py-2 rounded-lg text-sm font-bold" id="submit_review_btn">Submit Review</button>
+</div>
+
+<div class="space-y-sm max-h-56 overflow-y-auto" id="reviews_list"></div>
+</div>
 </div>
 
 </div>
@@ -196,6 +231,52 @@ notifications
             return `From ₦${min.toLocaleString()}`;
         }
         return `₦${Number(p.price).toLocaleString()}`;
+    }
+
+    // Presence heartbeat — lets other people see this user as "online".
+    // Anyone logged in gets marked active every 60s while this tab is open.
+    async function heartbeat() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) await supabaseClient.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id);
+    }
+    heartbeat();
+    setInterval(heartbeat, 60000);
+
+    async function isSellerOnline(sellerId) {
+        const { data } = await supabaseClient.from('profiles').select('last_seen_at').eq('id', sellerId).maybeSingle();
+        if (!data || !data.last_seen_at) return false;
+        return (Date.now() - new Date(data.last_seen_at).getTime()) < 2 * 60 * 1000; // active in the last 2 minutes
+    }
+
+    function renderStars(avg) {
+        const rounded = Math.round(avg || 0);
+        return '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+    }
+
+    async function attachRatings(products) {
+        const productIds = products.map(p => p.id);
+        const storeIds = [...new Set(products.map(p => p.store_id))];
+        if (productIds.length === 0) return products;
+
+        const { data: productRatings } = await supabaseClient
+            .from('product_rating_summary').select('*').in('product_id', productIds);
+        const { data: storeRatings } = await supabaseClient
+            .from('store_rating_summary').select('*').in('store_id', storeIds);
+
+        const prMap = {};
+        (productRatings || []).forEach(r => { prMap[r.product_id] = r; });
+        const srMap = {};
+        (storeRatings || []).forEach(r => { srMap[r.store_id] = r; });
+
+        products.forEach(p => {
+            const pr = prMap[p.id];
+            p.avg_rating = pr ? Number(pr.avg_rating) : 0;
+            p.review_count = pr ? pr.review_count : 0;
+            const sr = srMap[p.store_id];
+            p.store_avg_rating = sr ? Number(sr.avg_rating) : 0;
+            p.store_review_count = sr ? sr.review_count : 0;
+        });
+        return products;
     }
 
     function renderCategoryBar() {
@@ -273,7 +354,13 @@ notifications
                         ${p.store_logo_url ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-[12px] text-tertiary">storefront</span>'}
                     </div>
                     <p class="text-label-sm text-on-surface-variant truncate">${p.store_name || ''}</p>
+                    ${p.store_is_verified ? '<span class="material-symbols-outlined text-primary text-[14px]" title="Verified Seller" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}
                 </div>
+                ${p.review_count > 0 ? `
+                <div class="flex items-center gap-1 mb-xs">
+                    <span class="text-yellow-500 text-xs leading-none">${renderStars(p.avg_rating)}</span>
+                    <span class="text-[10px] text-on-surface-variant">${p.avg_rating} (${p.review_count})</span>
+                </div>` : ''}
                 <div class="flex justify-between items-center mt-auto pt-xs">
                     <span class="font-headline-md text-primary text-base">${formatPrice(p)}</span>
                 </div>
@@ -350,6 +437,20 @@ notifications
             ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />`
             : '<span class="material-symbols-outlined text-tertiary">storefront</span>';
 
+        const verifiedBadge = document.getElementById('detail_verified_badge');
+        verifiedBadge.classList.toggle('hidden', !p.store_is_verified);
+
+        // Check the seller's presence (async — updates the dot once we know)
+        const presenceDot = document.getElementById('detail_presence_dot');
+        presenceDot.style.background = '#8d6e63';
+        presenceDot.title = 'Offline';
+        if (p.seller_id) {
+            isSellerOnline(p.seller_id).then(online => {
+                presenceDot.style.background = online ? '#2ecc71' : '#8d6e63';
+                presenceDot.title = online ? 'Online' : 'Offline';
+            });
+        }
+
         const catEl = document.getElementById('detail_category');
         if (p.category) { catEl.textContent = p.category; catEl.classList.remove('hidden'); }
         else { catEl.classList.add('hidden'); }
@@ -362,6 +463,103 @@ notifications
 
         renderDetailImage();
         renderDetailThumbs();
+        loadReviews(p.id, p.store_id);
+    }
+
+    let selectedReviewRating = 0;
+
+    function paintStarPicker(rating) {
+        document.querySelectorAll('.star-pick').forEach(btn => {
+            const val = Number(btn.getAttribute('data-value'));
+            btn.classList.toggle('text-yellow-500', val <= rating);
+            btn.classList.toggle('text-outline-variant', val > rating);
+            btn.style.fontVariationSettings = val <= rating ? "'FILL' 1" : "'FILL' 0";
+        });
+    }
+
+    document.querySelectorAll('.star-pick').forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectedReviewRating = Number(btn.getAttribute('data-value'));
+            paintStarPicker(selectedReviewRating);
+        });
+    });
+
+    async function loadReviews(productId, storeId) {
+        const { data: reviews } = await supabaseClient
+            .from('reviews')
+            .select('*, profiles(full_name)')
+            .eq('product_id', productId)
+            .order('created_at', { ascending: false });
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+
+        const summaryWrap = document.getElementById('detail_rating_summary');
+        if (reviews && reviews.length > 0) {
+            const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+            document.getElementById('detail_rating_stars').textContent = renderStars(avg);
+            document.getElementById('detail_rating_text').textContent = `${avg.toFixed(1)} (${reviews.length})`;
+            summaryWrap.classList.remove('hidden');
+            summaryWrap.classList.add('flex');
+        } else {
+            summaryWrap.classList.add('hidden');
+            summaryWrap.classList.remove('flex');
+        }
+
+        const list = document.getElementById('reviews_list');
+        list.innerHTML = (reviews || []).map(r => `
+            <div class="p-sm bg-surface-container-low rounded-lg">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-bold text-on-surface">${(r.profiles?.full_name || 'A buyer').replace(/</g, '&lt;')}</p>
+                    <span class="text-yellow-500 text-xs">${renderStars(r.rating)}</span>
+                </div>
+                ${r.comment ? `<p class="text-sm text-on-surface-variant mt-1">${r.comment.replace(/</g, '&lt;')}</p>` : ''}
+            </div>
+        `).join('') || '<p class="text-sm text-on-surface-variant">No reviews yet — be the first to leave one.</p>';
+
+        // Pre-fill the form if this buyer already reviewed this product
+        selectedReviewRating = 0;
+        document.getElementById('review_comment_input').value = '';
+        paintStarPicker(0);
+        if (user) {
+            const mine = (reviews || []).find(r => r.buyer_id === user.id);
+            if (mine) {
+                selectedReviewRating = mine.rating;
+                paintStarPicker(mine.rating);
+                document.getElementById('review_comment_input').value = mine.comment || '';
+                document.getElementById('submit_review_btn').textContent = 'Update Your Review';
+            } else {
+                document.getElementById('submit_review_btn').textContent = 'Submit Review';
+            }
+        }
+
+        document.getElementById('submit_review_btn').onclick = () => submitReview(productId, storeId);
+    }
+
+    async function submitReview(productId, storeId) {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
+            return;
+        }
+        if (selectedReviewRating < 1) {
+            alert('Please select a star rating first.');
+            return;
+        }
+
+        const comment = document.getElementById('review_comment_input').value.trim();
+
+        const { error } = await supabaseClient.from('reviews').upsert({
+            product_id: productId,
+            store_id: storeId,
+            buyer_id: user.id,
+            rating: selectedReviewRating,
+            comment: comment || null
+        }, { onConflict: 'product_id,buyer_id' });
+
+        if (error) { alert('Could not save your review: ' + error.message); return; }
+
+        loadReviews(productId, storeId);
+        loadProducts(); // refresh star display on the grid too
     }
 
     function renderDetailImage() {
@@ -548,6 +746,7 @@ notifications
         // Rank: gold > pro > free, then newest first
         const rank = { gold: 3, pro: 2, free: 1 };
         allProducts = (data || []).sort((a, b) => (rank[b.plan] || 1) - (rank[a.plan] || 1) || new Date(b.created_at) - new Date(a.created_at));
+        await attachRatings(allProducts);
 
         applyFilters();
     }
