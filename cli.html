@@ -1,40 +1,8 @@
 <!DOCTYPE html>
-
 <html class="light" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Mega Mart - Shop Digital Products, Physical Goods & Services in Nigeria</title>
-
- 
-<!-- Favicon (inline SVG — no image upload needed) -->
-<link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23006b2c'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Arial, sans-serif' font-weight='bold' fill='white' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E" rel="icon" type="image/svg+xml"/>
-<link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23006b2c'/%3E%3Ctext x='50' y='68' font-size='58' font-family='Arial, sans-serif' font-weight='bold' fill='white' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E" rel="apple-touch-icon"/>
-<meta content="#006b2c" name="theme-color"/>
- 
-<!-- Core SEO -->
-<meta content="Shop digital products, physical goods, and professional services from verified sellers on Mega Mart. Fast WhatsApp checkout, trusted Nigerian sellers, new listings daily." name="description"/>
-<meta content="online marketplace Nigeria, buy online Nigeria, sell online Nigeria, digital products Nigeria, WhatsApp shopping, ecommerce Nigeria, Mega Mart, Lagos marketplace, buy and sell Nigeria" name="keywords"/>
-<meta content="index, follow" name="robots"/>
-<link href="https://mega-mart-fk1w.vercel.app/store.html" rel="canonical"/>
-<meta content="Mega Grace Computer Intel" name="author"/>
- 
-<!-- Open Graph (Facebook, WhatsApp, LinkedIn, Telegram) -->
-<meta content="Mega Mart" property="og:site_name"/>
-<meta content="Mega Mart - Nigeria's Marketplace to Buy & Sell Online" property="og:title"/>
-<meta content="Shop digital products, physical goods, and services from verified Nigerian sellers. Chat directly with sellers on WhatsApp." property="og:description"/>
-<meta content="https://mega-mart-fk1w.vercel.app/store.html" property="og:url"/>
-<meta content="website" property="og:type"/>
-<meta content="https://mega-mart-fk1w.vercel.app/og-image.jpg" property="og:image"/>
-<meta content="1200" property="og:image:width"/>
-<meta content="630" property="og:image:height"/>
-<meta content="en_NG" property="og:locale"/>
- 
-<!-- Twitter/X Card -->
-<meta content="summary_large_image" name="twitter:card"/>
-<meta content="Mega Mart - Nigeria's Marketplace to Buy & Sell Online" name="twitter:title"/>
-<meta content="Shop digital products, physical goods, and services from verified Nigerian sellers." name="twitter:description"/>
-<meta content="https://mega-mart-fk1w.vercel.app/og-image.jpg" name="twitter:image"/>
-      
+<title>My Mega Mart</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -44,103 +12,107 @@
           "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
           "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
           "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
-          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a", "tertiary": "#595c5e",
-          "primary-container": "#00873a", "on-primary-container": "#f7fff2"
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a", "inverse-surface": "#213145"
         },
         "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
-        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px", "gutter": "16px", "container-max": "1280px" },
-        "fontFamily": { "headline-lg-mobile": ["Inter"], "headline-md": ["Inter"], "label-md": ["Inter"], "body-md": ["Inter"], "label-sm": ["Inter"] },
-        "fontSize": {
-          "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
-          "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
-          "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
-          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
-          "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
-        }
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px" }
       }}}
     </script>
 <style>
-        body { font-family: 'Inter', sans-serif; }
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .product-card { transition: box-shadow 0.15s ease; }
-        .product-card.highlight { box-shadow: 0 0 0 3px #006b2c; }
-        .badge-approved { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-    </style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
+    #drawer-overlay.hidden { display: none; }
+</style>
 </head>
-<body class="bg-surface text-on-surface font-body-md">
-<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-md h-16 shadow-sm bg-surface">
-<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary tracking-tight">Mega Mart</h1>
+<body class="bg-background text-on-background min-h-screen pb-24">
+
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-md h-16 shadow-sm bg-surface">
 <div class="flex items-center gap-sm">
-<a class="text-primary text-label-md font-bold hover:underline" href="login.html">Log In</a>
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95" id="menu-toggle">menu</button>
+<span class="font-bold text-primary text-xl">Mega Mart</span>
+</div>
+<div class="relative" id="notif_bell_wrap">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95 relative" id="notif_bell_btn">
+notifications
+<span class="hidden absolute -top-0.5 -right-0.5 bg-error text-on-error text-[10px] font-bold min-w-[18px] h-[18px] rounded-full items-center justify-center px-1" id="notif_bell_badge"></span>
+</button>
+<div class="hidden absolute right-0 mt-2 w-80 max-w-[85vw] bg-white rounded-xl shadow-xl border border-outline-variant/20 max-h-[70vh] overflow-y-auto z-[70]" id="notif_dropdown">
+<p class="p-md text-center text-on-surface-variant text-sm hidden" id="notif_dropdown_empty">You're all caught up.</p>
+<div id="notif_dropdown_list"></div>
+</div>
 </div>
 </header>
 
-<main class="pt-20 pb-16 max-w-container-max mx-auto px-md">
+<div class="fixed inset-0 bg-black/50 z-[60] hidden" id="drawer-overlay"></div>
+<aside class="fixed top-0 left-0 h-full w-64 bg-surface-container-lowest z-[70] transition-transform -translate-x-full shadow-xl overflow-y-auto" id="sidebar">
+<div class="p-lg flex flex-col h-full">
+<div class="flex items-center justify-between mb-lg">
+<span class="font-bold text-primary text-xl">Menu</span>
+<button class="material-symbols-outlined" id="close-drawer">close</button>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-sm p-sm rounded-lg bg-surface-container-low font-label-md text-primary" href="cli.html">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+</a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="profile-settings.html">
+<span class="material-symbols-outlined">person_outline</span> Profile Settings
+</a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="messages.html">
+<span class="material-symbols-outlined">chat</span> Messages
+</a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="store.html">
+<span class="material-symbols-outlined">storefront</span> Continue Shopping
+</a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-error" href="#" id="logout_btn">
+<span class="material-symbols-outlined">logout</span> Log Out
+</a>
+</nav>
+</div>
+</aside>
 
-<div class="mb-md hidden" id="announcement_banner">
-<div class="bg-primary-container/10 border border-primary/20 rounded-xl p-md flex items-start gap-sm">
-<span class="material-symbols-outlined text-primary">campaign</span>
-<div>
-<p class="font-label-md text-label-md text-on-surface font-bold" id="announcement_title"></p>
-<p class="text-label-sm text-on-surface-variant" id="announcement_body"></p>
+<main class="mt-20 px-md max-w-[900px] mx-auto space-y-lg">
+
+<div class="hidden p-md bg-error-container rounded-lg" id="error_banner">
+<p class="font-label-md text-label-md text-on-error-container" id="error_text"></p>
 </div>
+
+<!-- Profile summary -->
+<div class="section-card p-lg flex items-center gap-md">
+<div class="relative flex-shrink-0">
+<div class="w-16 h-16 rounded-full bg-surface-container-high overflow-hidden flex items-center justify-center" id="profile_avatar">
+<span class="material-symbols-outlined text-3xl text-tertiary">person</span>
+</div>
+</div>
+<div class="min-w-0">
+<p class="font-bold text-lg text-on-surface truncate" id="profile_name">Welcome</p>
+<p class="text-sm text-on-surface-variant truncate" id="profile_email"></p>
+<a class="text-primary text-sm font-bold hover:underline" href="profile-settings.html">Edit profile &amp; photo</a>
 </div>
 </div>
 
-<div class="mb-lg">
-<div class="relative group">
-<input class="w-full h-12 bg-surface-container-low border border-outline-variant rounded-xl px-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md" id="search_input" placeholder="Search for products, services and more..." type="text"/>
-<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary">search</span>
+<!-- Orders -->
+<section class="section-card p-lg space-y-md">
+<div class="flex justify-between items-center">
+<h2 class="font-bold text-lg text-on-surface">Your Orders</h2>
 </div>
-</div>
-
-<div class="mb-lg flex gap-sm overflow-x-auto hide-scrollbar pb-1" id="category_bar"></div>
-
-<section>
-<div class="flex justify-between items-end mb-md">
-<h2 class="font-headline-md text-headline-md text-on-surface">All Products</h2>
-<span class="text-label-sm text-on-surface-variant" id="product_count"></span>
-</div>
-<div class="grid grid-cols-2 lg:grid-cols-5 gap-md" id="product_grid">
-<p class="col-span-full text-on-surface-variant">Loading products...</p>
-</div>
-
-<div class="flex justify-center items-center gap-md mt-lg" id="pagination_bar">
-<button class="w-10 h-10 rounded-full bg-surface-container-low text-on-surface flex items-center justify-center disabled:opacity-40" id="prev_page_btn">
-<span class="material-symbols-outlined">chevron_left</span>
-</button>
-<span class="text-label-sm text-on-surface-variant" id="page_indicator">Page 1</span>
-<button class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center disabled:opacity-40" id="next_page_btn">
-<span class="material-symbols-outlined">chevron_right</span>
-</button>
+<div class="space-y-sm" id="orders_list">
+<p class="text-on-surface-variant text-sm">No orders yet — once you agree on a purchase in chat with a seller, it'll show up here.</p>
 </div>
 </section>
 
-<footer class="mt-2xl pt-lg border-t border-outline-variant/30 text-center text-label-sm text-on-surface-variant space-y-2">
-<div class="flex justify-center gap-lg">
-<a class="hover:text-primary hover:underline" href="terms.html">Terms of Service</a>
-<a class="hover:text-primary hover:underline" href="policies.html">Store Policies</a>
+<!-- Recent chats -->
+<section class="section-card p-lg space-y-md">
+<div class="flex justify-between items-center">
+<h2 class="font-bold text-lg text-on-surface">Recent Chats</h2>
+<a class="text-primary text-sm font-bold hover:underline" href="messages.html">View all</a>
 </div>
-<p>© 2026 Mega Mart. All rights reserved.</p>
-</footer>
+<div class="space-y-sm" id="recent_chats_list">
+<p class="text-on-surface-variant text-sm">Loading...</p>
+</div>
+</section>
 
 </main>
-
-<!-- Buyer interest modal -->
-<div class="fixed inset-0 bg-black/50 z-[80] hidden items-center justify-center p-md" id="interest_modal">
-<div class="w-full max-w-[400px] bg-white rounded-xl p-lg space-y-md">
-<h3 class="font-headline-md text-headline-md text-on-surface">Quick info before you chat</h3>
-<p class="text-label-sm text-on-surface-variant" id="interest_product_name"></p>
-<input class="w-full h-11 px-3 border border-[#E2E8F0] rounded-lg" id="interest_name" placeholder="Your name" type="text"/>
-<input class="w-full h-11 px-3 border border-[#E2E8F0] rounded-lg" id="interest_phone" placeholder="Your phone number" type="tel"/>
-<div class="flex gap-sm">
-<button class="flex-1 h-11 bg-surface-container-low rounded-lg font-bold" id="interest_cancel">Cancel</button>
-<button class="flex-1 h-11 bg-primary text-on-primary rounded-lg font-bold" id="interest_continue">Continue to WhatsApp</button>
-</div>
-</div>
-</div>
 
 <script>
     const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
@@ -148,197 +120,189 @@
     const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let allProducts = [];
-    let filteredProducts = [];
-    let currentPage = 0;
-    let selectedCategory = 'all';
-    const PAGE_SIZE = 30;
-    let pendingWhatsapp = null;
+    let currentUser = null;
 
-    function formatPrice(p) {
-        if (p.product_type === 'service' && p.pricing_tiers && p.pricing_tiers.length) {
-            const min = Math.min(...p.pricing_tiers.map(t => t.price));
-            return `From ₦${min.toLocaleString()}`;
-        }
-        return `₦${Number(p.price).toLocaleString()}`;
+    function showError(msg) {
+        document.getElementById('error_text').textContent = msg;
+        document.getElementById('error_banner').classList.remove('hidden');
     }
 
-    function renderCategoryBar() {
-        const cats = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)));
-        const bar = document.getElementById('category_bar');
-        const chips = ['all', ...cats];
-        bar.innerHTML = chips.map(c => `
-            <button class="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border cat-chip ${selectedCategory === c ? 'bg-primary text-on-primary border-primary' : 'bg-white text-on-surface-variant border-outline-variant'}" data-cat="${c}">
-                ${c === 'all' ? 'All' : c}
+    // Sidebar drawer
+    document.addEventListener('DOMContentLoaded', () => {
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const drawerOverlay = document.getElementById('drawer-overlay');
+        const closeDrawer = document.getElementById('close-drawer');
+        const toggleDrawer = () => {
+            sidebar.classList.toggle('-translate-x-full');
+            drawerOverlay.classList.toggle('hidden');
+        };
+        menuToggle.addEventListener('click', toggleDrawer);
+        closeDrawer.addEventListener('click', toggleDrawer);
+        drawerOverlay.addEventListener('click', toggleDrawer);
+    });
+
+    document.getElementById('logout_btn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await supabaseClient.auth.signOut();
+        window.location.href = 'login.html';
+    });
+
+    // Presence heartbeat — so sellers see this buyer as online while chatting
+    async function heartbeat() {
+        if (currentUser) await supabaseClient.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', currentUser.id);
+    }
+    setInterval(heartbeat, 60000);
+
+    async function loadProfile(user) {
+        const { data: profile } = await supabaseClient
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        document.getElementById('profile_name').textContent = profile?.full_name || 'Welcome';
+        document.getElementById('profile_email').textContent = user.email;
+
+        if (profile?.avatar_url) {
+            document.getElementById('profile_avatar').innerHTML = `<img src="${profile.avatar_url}" class="w-full h-full object-cover" />`;
+        }
+    }
+
+    async function loadRecentChats(userId) {
+        const { data, error } = await supabaseClient
+            .from('conversations')
+            .select('*, seller:profiles!seller_id(full_name, avatar_url), products(name, image_urls)')
+            .eq('buyer_id', userId)
+            .order('last_message_at', { ascending: false, nullsFirst: false })
+            .limit(5);
+
+        const list = document.getElementById('recent_chats_list');
+        if (error) { list.innerHTML = `<p class="text-error text-sm">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant text-sm">No conversations yet — contact a seller from any product page to start one.</p>'; return; }
+
+        list.innerHTML = data.map(c => `
+            <a class="flex items-center gap-sm p-sm hover:bg-surface-container-low rounded-lg transition-colors" href="messages.html?conversation=${c.id}">
+                <div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    ${c.seller?.avatar_url ? `<img src="${c.seller.avatar_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-tertiary">storefront</span>'}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="font-label-md text-on-surface truncate">${(c.seller?.full_name || 'Seller').replace(/</g, '&lt;')}</p>
+                    <p class="text-sm text-on-surface-variant truncate">${(c.last_message || 'Say hello about ' + (c.products?.name || 'this product')).replace(/</g, '&lt;')}</p>
+                </div>
+            </a>
+        `).join('');
+    }
+
+    async function loadBellNotifications() {
+        if (!currentUser) return;
+
+        const { data: notifRows } = await supabaseClient
+            .from('notifications')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false)
+            .order('created_at', { ascending: false });
+
+        const { data: unreadMsgs } = await supabaseClient
+            .from('messages')
+            .select('conversation_id, created_at')
+            .is('read_at', null)
+            .neq('sender_id', currentUser.id);
+
+        const convMap = {};
+        (unreadMsgs || []).forEach(m => {
+            if (!convMap[m.conversation_id]) convMap[m.conversation_id] = { count: 0, latest: m.created_at };
+            convMap[m.conversation_id].count++;
+            if (m.created_at > convMap[m.conversation_id].latest) convMap[m.conversation_id].latest = m.created_at;
+        });
+
+        let convEntries = [];
+        const convIds = Object.keys(convMap);
+        if (convIds.length > 0) {
+            const { data: convs } = await supabaseClient
+                .from('conversations')
+                .select('id, seller_id, seller:profiles!seller_id(full_name)')
+                .in('id', convIds);
+            convEntries = (convs || []).map(c => ({
+                type: 'message',
+                id: c.id,
+                text: `${convMap[c.id].count} new message${convMap[c.id].count > 1 ? 's' : ''} from ${c.seller?.full_name || 'a seller'}`,
+                created_at: convMap[c.id].latest
+            }));
+        }
+
+        const notifEntries = (notifRows || []).map(n => ({ type: 'notification', id: n.id, text: n.message, created_at: n.created_at }));
+        const combined = [...notifEntries, ...convEntries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        const badge = document.getElementById('notif_bell_badge');
+        const totalCount = (notifRows ? notifRows.length : 0) + (unreadMsgs ? unreadMsgs.length : 0);
+        if (totalCount > 0) {
+            badge.textContent = totalCount > 99 ? '99+' : totalCount;
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+        } else {
+            badge.classList.add('hidden');
+            badge.classList.remove('flex');
+        }
+
+        const list = document.getElementById('notif_dropdown_list');
+        const emptyEl = document.getElementById('notif_dropdown_empty');
+        if (combined.length === 0) {
+            list.innerHTML = '';
+            emptyEl.classList.remove('hidden');
+            return;
+        }
+        emptyEl.classList.add('hidden');
+
+        list.innerHTML = combined.map(e => `
+            <button class="w-full text-left p-md hover:bg-surface-container-low border-b border-outline-variant/10 flex items-start gap-sm notif-item" data-type="${e.type}" data-id="${e.id}">
+                <span class="material-symbols-outlined text-primary text-lg flex-shrink-0">${e.type === 'message' ? 'chat' : 'notifications'}</span>
+                <span class="text-sm text-on-surface flex-1">${e.text.replace(/</g, '&lt;')}</span>
             </button>
         `).join('');
-        bar.querySelectorAll('.cat-chip').forEach(btn => {
-            btn.addEventListener('click', () => {
-                selectedCategory = btn.getAttribute('data-cat');
-                applyFilters();
+
+        list.querySelectorAll('.notif-item').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const type = btn.getAttribute('data-type');
+                const id = btn.getAttribute('data-id');
+                if (type === 'notification') {
+                    await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id);
+                    loadBellNotifications();
+                } else {
+                    window.location.href = 'messages.html?conversation=' + id;
+                }
             });
         });
     }
 
-    function applyFilters() {
-        const q = document.getElementById('search_input').value.toLowerCase();
-        filteredProducts = allProducts.filter(p => {
-            const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-            const matchesSearch = !q ||
-                p.name.toLowerCase().includes(q) ||
-                (p.category || '').toLowerCase().includes(q) ||
-                (p.store_name || '').toLowerCase().includes(q);
-            return matchesCategory && matchesSearch;
-        });
-        currentPage = 0;
-        renderCategoryBar();
-        renderPage();
-    }
-
-    function renderPage() {
-        document.getElementById('product_count').textContent = `${filteredProducts.length} products`;
-        const start = currentPage * PAGE_SIZE;
-        const pageItems = filteredProducts.slice(start, start + PAGE_SIZE);
-        renderGrid(pageItems);
-
-        const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-        document.getElementById('page_indicator').textContent = `Page ${currentPage + 1} of ${totalPages}`;
-        document.getElementById('prev_page_btn').disabled = currentPage === 0;
-        document.getElementById('next_page_btn').disabled = currentPage >= totalPages - 1;
-        document.getElementById('pagination_bar').style.display = filteredProducts.length > PAGE_SIZE ? 'flex' : 'none';
-
-        pageItems.forEach(p => supabaseClient.rpc('track_impression', { p_product_id: p.id }));
-    }
-
-    document.getElementById('prev_page_btn').addEventListener('click', () => {
-        if (currentPage > 0) { currentPage--; renderPage(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    document.getElementById('notif_bell_btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('notif_dropdown').classList.toggle('hidden');
     });
-    document.getElementById('next_page_btn').addEventListener('click', () => {
-        const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
-        if (currentPage < totalPages - 1) { currentPage++; renderPage(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('notif_bell_wrap').contains(e.target)) {
+            document.getElementById('notif_dropdown').classList.add('hidden');
+        }
     });
 
-    function renderGrid(products) {
-        const grid = document.getElementById('product_grid');
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href); return; }
+        currentUser = user;
 
-        if (products.length === 0) {
-            grid.innerHTML = '<p class="col-span-full text-on-surface-variant">No products found.</p>';
-            return;
-        }
+        await loadProfile(user);
+        await loadRecentChats(user.id);
+        await loadBellNotifications();
+        heartbeat();
 
-        grid.innerHTML = products.map(p => `
-            <div class="product-card bg-surface-container-lowest rounded-xl p-sm shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col" id="product-${p.id}">
-                <div class="relative aspect-square rounded-lg overflow-hidden bg-surface-container mb-sm">
-                    ${p.image_urls && p.image_urls[0] ? `<img class="w-full h-full object-cover" src="${p.image_urls[0]}" />` : '<div class="w-full h-full flex items-center justify-center text-on-surface-variant"><span class="material-symbols-outlined">image</span></div>'}
-                    ${p.plan !== 'free' ? `<span class="absolute top-2 left-2 bg-primary text-on-primary badge-approved">${p.plan.toUpperCase()}</span>` : ''}
-                </div>
-                <h3 class="font-label-md text-on-surface line-clamp-1 mb-xs">${p.name}</h3>
-                <div class="flex items-center gap-1 mb-xs">
-                    <div class="w-5 h-5 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
-                        ${p.store_logo_url ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-[12px] text-tertiary">storefront</span>'}
-                    </div>
-                    <p class="text-label-sm text-on-surface-variant truncate">${p.store_name || ''}</p>
-                </div>
-                <div class="flex justify-between items-center mt-auto pt-xs">
-                    <span class="font-headline-md text-primary text-base">${formatPrice(p)}</span>
-                </div>
-                <button class="w-full h-10 mt-sm bg-primary text-on-primary rounded-lg text-sm font-bold flex items-center justify-center gap-1 buy-now-btn" data-id="${p.id}">
-                    <span class="material-symbols-outlined text-base">chat</span> Buy Now
-                </button>
-            </div>
-        `).join('');
-
-        document.querySelectorAll('.buy-now-btn').forEach(btn => {
-            btn.addEventListener('click', () => openInterestModal(btn.getAttribute('data-id')));
-        });
-
-        const params = new URLSearchParams(window.location.search);
-        const highlightId = params.get('product');
-        if (highlightId) {
-            const el = document.getElementById('product-' + highlightId);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.classList.add('highlight');
-            }
-        }
+        supabaseClient
+            .channel('bell-notifications')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => loadBellNotifications())
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => loadBellNotifications())
+            .subscribe();
     }
 
-    function openInterestModal(productId) {
-        const product = allProducts.find(p => p.id === productId);
-        if (!product) return;
-        pendingWhatsapp = product;
-        document.getElementById('interest_product_name').textContent = product.name;
-        document.getElementById('interest_modal').classList.remove('hidden');
-        document.getElementById('interest_modal').classList.add('flex');
-    }
-
-    document.getElementById('interest_cancel').addEventListener('click', () => {
-        document.getElementById('interest_modal').classList.add('hidden');
-        document.getElementById('interest_modal').classList.remove('flex');
-    });
-
-    document.getElementById('interest_continue').addEventListener('click', async () => {
-        const product = pendingWhatsapp;
-        if (!product) return;
-
-        const buyerName = document.getElementById('interest_name').value.trim();
-        const buyerPhone = document.getElementById('interest_phone').value.trim();
-
-        await supabaseClient.rpc('track_click', { p_product_id: product.id });
-
-        await supabaseClient.from('buyer_inquiries').insert({
-            product_id: product.id,
-            store_id: product.store_id,
-            buyer_name: buyerName || 'Anonymous',
-            buyer_phone: buyerPhone || null,
-            message: `Interested via Buy Now on "${product.name}"`
-        });
-
-        const whatsappNumber = (product.whatsapp_link || product.store_whatsapp || '').replace(/[^0-9]/g, '');
-        const message = encodeURIComponent(`Hi! I saw "${product.name}" on Mega Mart and I'm interested.`);
-        const url = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${message}` : `https://wa.me/?text=${message}`;
-
-        document.getElementById('interest_modal').classList.add('hidden');
-        document.getElementById('interest_modal').classList.remove('flex');
-        window.open(url, '_blank');
-    });
-
-    document.getElementById('search_input').addEventListener('input', applyFilters);
-
-    async function loadAnnouncement() {
-        const { data } = await supabaseClient
-            .from('announcements')
-            .select('*')
-            .eq('audience', 'store')
-            .eq('is_active', true)
-            .order('created_at', { ascending: false })
-            .limit(1);
-        if (data && data.length > 0) {
-            document.getElementById('announcement_title').textContent = data[0].title;
-            document.getElementById('announcement_body').textContent = data[0].body;
-            document.getElementById('announcement_banner').classList.remove('hidden');
-        }
-    }
-
-    async function loadProducts() {
-        const { data, error } = await supabaseClient
-            .from('product_feed')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            document.getElementById('product_grid').innerHTML = `<p class="col-span-full text-error">Could not load products: ${error.message}</p>`;
-            return;
-        }
-
-        // Rank: gold > pro > free, then newest first
-        const rank = { gold: 3, pro: 2, free: 1 };
-        allProducts = (data || []).sort((a, b) => (rank[b.plan] || 1) - (rank[a.plan] || 1) || new Date(b.created_at) - new Date(a.created_at));
-
-        applyFilters();
-    }
-
-    loadAnnouncement();
-    loadProducts();
+    init();
 </script>
 </body></html>
