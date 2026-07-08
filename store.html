@@ -281,7 +281,7 @@ notifications
         document.querySelectorAll('.product-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.contact-seller-btn')) return;
-                window.location.href = 'product.html?id=' + card.getAttribute('data-product-id');
+                window.location.href = 'pro.html?id=' + card.getAttribute('data-product-id');
             });
         });
 
