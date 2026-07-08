@@ -304,6 +304,14 @@ notifications
 
     let store = null;
 
+    // Presence heartbeat — marks this seller "online" for buyers viewing their products
+    async function heartbeat() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) await supabaseClient.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id);
+    }
+    heartbeat();
+    setInterval(heartbeat, 60000);
+
     async function loadNotifications(userId) {
         const { data } = await supabaseClient
             .from('notifications')
@@ -552,7 +560,7 @@ notifications
         } else {
             productsList.innerHTML = products.map(p => {
                 const s = statsMap[p.id] || { impressions: 0, clicks: 0 };
-                const shareUrl = `${window.location.origin}/store.html?product=${p.id}`;
+                const shareUrl = `${window.location.origin}/product.html?id=${p.id}`;
                 return `
                 <div class="flex items-center justify-between p-sm hover:bg-surface-container-low rounded-lg transition-colors gap-sm">
                     <div class="flex items-center gap-md min-w-0">
