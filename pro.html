@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Product | Mega Mart</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = { darkMode: "class", theme: { extend: {
+        "colors": {
+          "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+          "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+          "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a",
+          "primary-container": "#00873a", "on-primary-container": "#f7fff2"
+        },
+        "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px", "container-max": "1100px" }
+      }}}
+    </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .thumb-btn.active { border-color: #006b2c; }
+    #image_viewer { display: none; }
+    #image_viewer.flex { display: flex; }
+    #notif_dropdown, #interest_modal { z-index: 80; }
+    @media (min-width: 900px) { #sticky_cta_mobile { display: none; } }
+    #sticky_cta_mobile { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body class="bg-surface text-on-surface pb-24 md:pb-0">
+
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-md h-16 shadow-sm bg-surface">
+<div class="flex items-center gap-sm min-w-0">
+<a class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high flex-shrink-0" href="store.html">arrow_back</a>
+<span class="font-bold text-primary text-lg truncate">Mega Mart</span>
+</div>
+<div class="relative flex-shrink-0" id="notif_bell_wrap">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95 relative" id="notif_bell_btn">
+notifications
+<span class="hidden absolute -top-0.5 -right-0.5 bg-error text-on-error text-[10px] font-bold min-w-[18px] h-[18px] rounded-full items-center justify-center px-1" id="notif_bell_badge"></span>
+</button>
+<div class="hidden absolute right-0 mt-2 w-80 max-w-[85vw] bg-white rounded-xl shadow-xl border border-outline-variant/20 max-h-[70vh] overflow-y-auto" id="notif_dropdown">
+<p class="p-md text-center text-on-surface-variant text-sm hidden" id="notif_dropdown_empty">You're all caught up.</p>
+<div id="notif_dropdown_list"></div>
+</div>
+</div>
+</header>
+
+<main class="pt-20 pb-lg max-w-container-max mx-auto px-md">
+
+<div class="hidden p-md bg-red-50 border border-error/30 rounded-lg mb-md" id="page_error">
+<p class="text-sm text-error" id="page_error_text"></p>
+</div>
+
+<div id="loading_state" class="py-2xl text-center text-on-surface-variant">Loading product...</div>
+
+<div class="hidden grid grid-cols-1 md:grid-cols-[1.1fr_0.9fr] gap-xl items-start" id="product_content">
+
+<!-- Left: gallery -->
+<div>
+<div class="relative w-full aspect-square rounded-xl overflow-hidden bg-surface-container-high">
+<img alt="" class="w-full h-full object-cover cursor-zoom-in" id="main_image"/>
+<button class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center" id="prev_img_btn">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center" id="next_img_btn">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+<span class="absolute top-3 left-3 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded-full" id="tap_hint">Tap to zoom</span>
+<span class="hidden absolute top-3 right-3 bg-primary text-on-primary text-xs font-bold px-2 py-1 rounded-full uppercase" id="plan_badge_pill"></span>
+</div>
+<div class="flex gap-xs mt-sm overflow-x-auto hide-scrollbar" id="thumbs_row"></div>
+
+<!-- Description -->
+<div class="mt-lg">
+<h2 class="font-bold text-lg text-on-surface mb-xs">About this product</h2>
+<p class="hidden text-sm text-on-surface-variant leading-relaxed whitespace-pre-wrap" id="description_text"></p>
+<p class="hidden text-sm text-on-surface-variant italic" id="no_description_text">No description provided.</p>
+</div>
+
+<!-- Reviews -->
+<div class="mt-xl border-t border-outline-variant/20 pt-lg">
+<div class="flex items-center justify-between mb-md">
+<h2 class="font-bold text-lg text-on-surface">Ratings &amp; Reviews</h2>
+<div class="hidden items-center gap-1" id="rating_summary">
+<span class="text-yellow-500" id="rating_stars"></span>
+<span class="text-sm text-on-surface-variant" id="rating_text"></span>
+</div>
+</div>
+
+<div class="p-md bg-surface-container-low rounded-xl mb-md">
+<p class="text-sm font-bold text-on-surface mb-xs" id="review_form_label">Leave a review</p>
+<div class="flex items-center gap-1 mb-xs" id="review_star_picker">
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="1">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="2">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="3">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="4">star</button>
+<button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="5">star</button>
+</div>
+<textarea class="w-full px-3 py-2 bg-white border border-outline-variant rounded-lg text-sm" id="review_comment_input" placeholder="Share your experience with this product (optional)" rows="2"></textarea>
+<button class="mt-xs bg-primary text-on-primary px-md py-2 rounded-lg text-sm font-bold" id="submit_review_btn">Submit Review</button>
+</div>
+
+<div class="space-y-sm" id="reviews_list"></div>
+</div>
+</div>
+
+<!-- Right: sticky info / seller / contact card -->
+<div class="md:sticky md:top-20 space-y-md">
+<div class="bg-white border border-outline-variant/20 rounded-xl p-lg space-y-md">
+<div>
+<span class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant uppercase" id="category_pill"></span>
+<h1 class="text-xl font-bold text-on-surface mt-1" id="product_name"></h1>
+</div>
+
+<div class="flex items-center gap-1" id="grid_rating_summary">
+<span class="text-yellow-500 text-sm" id="grid_rating_stars"></span>
+<span class="text-xs text-on-surface-variant" id="grid_rating_text"></span>
+</div>
+
+<p class="text-3xl font-bold text-primary" id="product_price"></p>
+
+<!-- Seller card -->
+<div class="flex items-center gap-sm p-sm bg-surface-container-low rounded-xl">
+<div class="relative flex-shrink-0">
+<div class="w-11 h-11 rounded-full overflow-hidden bg-surface-container-high flex items-center justify-center" id="seller_avatar">
+<span class="material-symbols-outlined text-tertiary">storefront</span>
+</div>
+<span class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white" id="presence_dot" style="background:#8d6e63;" title="Offline"></span>
+</div>
+<div class="min-w-0 flex-1">
+<div class="flex items-center gap-1">
+<p class="font-bold text-on-surface truncate" id="seller_name"></p>
+<span class="hidden material-symbols-outlined text-primary text-[16px]" id="seller_verified_badge" title="Verified Seller" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<p class="text-xs text-on-surface-variant" id="seller_status">Offline</p>
+</div>
+</div>
+
+<button class="w-full h-12 bg-primary text-on-primary rounded-lg font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform" id="contact_seller_btn">
+<span class="material-symbols-outlined">chat</span> Contact Seller
+</button>
+
+<p class="hidden text-xs text-on-surface-variant" id="delivery_text"></p>
+</div>
+</div>
+
+</div>
+</main>
+
+<!-- Sticky mobile CTA bar -->
+<div class="hidden fixed bottom-0 left-0 w-full bg-white border-t border-outline-variant/20 px-md pt-sm z-40 items-center gap-sm" id="sticky_cta_mobile">
+<p class="text-lg font-bold text-primary flex-1" id="sticky_price"></p>
+<button class="flex-shrink-0 h-12 px-lg bg-primary text-on-primary rounded-lg font-bold flex items-center gap-2" id="sticky_contact_btn">
+<span class="material-symbols-outlined">chat</span> Contact
+</button>
+</div>
+
+<!-- Fullscreen image viewer -->
+<div class="fixed inset-0 bg-black z-[95] hidden items-center justify-center" id="image_viewer">
+<button class="absolute top-4 right-4 z-10 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center" id="viewer_close_btn">
+<span class="material-symbols-outlined">close</span>
+</button>
+<button class="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center" id="viewer_prev_btn">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<img alt="" class="max-w-full max-h-full object-contain select-none" id="viewer_image"/>
+<button class="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center" id="viewer_next_btn">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+<span class="absolute bottom-6 left-1/2 -translate-x-1/2 text-white text-sm font-bold bg-black/40 px-3 py-1 rounded-full" id="viewer_counter"></span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const productId = new URLSearchParams(window.location.search).get('id');
+    let product = null;
+    let images = [];
+    let imageIndex = 0;
+    let viewerImages = [];
+    let viewerIndex = 0;
+    let selectedReviewRating = 0;
+
+    function formatPrice(p) {
+        if (p.product_type === 'service' && p.pricing_tiers && p.pricing_tiers.length) {
+            const min = Math.min(...p.pricing_tiers.map(t => t.price));
+            return `From ₦${min.toLocaleString()}`;
+        }
+        return `₦${Number(p.price).toLocaleString()}`;
+    }
+    function renderStars(avg) {
+        const rounded = Math.round(avg || 0);
+        return '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+    }
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    async function init() {
+        if (!productId) { showPageError('No product specified.'); return; }
+
+        const { data, error } = await supabaseClient.from('product_feed').select('*').eq('id', productId).maybeSingle();
+        if (error || !data) { showPageError('This product could not be found — it may have been removed or is awaiting approval.'); return; }
+
+        product = data;
+        images = (product.image_urls || []).slice(0, 5);
+
+        document.title = product.name + ' | Mega Mart';
+        renderProduct();
+        renderImage();
+        renderThumbs();
+        loadReviews();
+        checkPresence();
+        supabaseClient.rpc('track_impression', { p_product_id: product.id });
+
+        document.getElementById('loading_state').classList.add('hidden');
+        document.getElementById('product_content').classList.remove('hidden');
+        document.getElementById('product_content').classList.add('grid');
+        document.getElementById('sticky_cta_mobile').classList.remove('hidden');
+        document.getElementById('sticky_cta_mobile').classList.add('flex');
+
+        loadBellNotifications();
+        subscribeBellRealtimeOnce();
+        heartbeat();
+        setInterval(heartbeat, 60000);
+    }
+
+    function showPageError(msg) {
+        document.getElementById('loading_state').classList.add('hidden');
+        document.getElementById('page_error_text').textContent = msg;
+        document.getElementById('page_error').classList.remove('hidden');
+    }
+
+    function renderProduct() {
+        document.getElementById('product_name').textContent = product.name;
+        document.getElementById('product_price').textContent = formatPrice(product);
+        document.getElementById('sticky_price').textContent = formatPrice(product);
+
+        if (product.category) {
+            const pill = document.getElementById('category_pill');
+            pill.textContent = product.category;
+            pill.classList.remove('hidden');
+        }
+
+        if (product.plan && product.plan !== 'free') {
+            const badge = document.getElementById('plan_badge_pill');
+            badge.textContent = product.plan.toUpperCase();
+            badge.classList.remove('hidden');
+        }
+
+        if (product.description) {
+            document.getElementById('description_text').textContent = product.description;
+            document.getElementById('description_text').classList.remove('hidden');
+        } else {
+            document.getElementById('no_description_text').classList.remove('hidden');
+        }
+
+        if (product.delivery_timeline) {
+            document.getElementById('delivery_text').textContent = '🚚 ' + product.delivery_timeline;
+            document.getElementById('delivery_text').classList.remove('hidden');
+        }
+
+        document.getElementById('seller_name').textContent = product.store_name || 'Mega Mart Seller';
+        document.getElementById('seller_avatar').innerHTML = product.store_logo_url
+            ? `<img src="${product.store_logo_url}" class="w-full h-full object-cover" />`
+            : '<span class="material-symbols-outlined text-tertiary">storefront</span>';
+        document.getElementById('seller_verified_badge').classList.toggle('hidden', !product.store_is_verified);
+
+        document.getElementById('tap_hint').classList.toggle('hidden', images.length === 0);
+        document.getElementById('prev_img_btn').classList.toggle('hidden', images.length <= 1);
+        document.getElementById('next_img_btn').classList.toggle('hidden', images.length <= 1);
+    }
+
+    async function checkPresence() {
+        if (!product.seller_id) return;
+        const { data } = await supabaseClient.from('profiles').select('last_seen_at').eq('id', product.seller_id).maybeSingle();
+        const online = data?.last_seen_at && (Date.now() - new Date(data.last_seen_at).getTime()) < 2 * 60 * 1000;
+        document.getElementById('presence_dot').style.background = online ? '#2ecc71' : '#8d6e63';
+        document.getElementById('presence_dot').title = online ? 'Online' : 'Offline';
+        document.getElementById('seller_status').textContent = online ? 'Online now' : 'Offline';
+    }
+
+    function renderImage() {
+        const main = document.getElementById('main_image');
+        if (images.length === 0) { main.classList.add('hidden'); return; }
+        main.src = images[imageIndex];
+        main.classList.remove('hidden');
+    }
+
+    function renderThumbs() {
+        const wrap = document.getElementById('thumbs_row');
+        if (images.length <= 1) { wrap.innerHTML = ''; return; }
+        wrap.innerHTML = images.map((url, i) => `
+            <button class="thumb-btn w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border-2 ${i === imageIndex ? 'active' : 'border-transparent'}" data-idx="${i}">
+                <img src="${url}" class="w-full h-full object-cover" />
+            </button>
+        `).join('');
+        wrap.querySelectorAll('.thumb-btn').forEach(btn => {
+            btn.addEventListener('click', () => { imageIndex = Number(btn.getAttribute('data-idx')); renderImage(); renderThumbs(); });
+        });
+    }
+
+    document.getElementById('prev_img_btn').addEventListener('click', () => { imageIndex = (imageIndex - 1 + images.length) % images.length; renderImage(); renderThumbs(); });
+    document.getElementById('next_img_btn').addEventListener('click', () => { imageIndex = (imageIndex + 1) % images.length; renderImage(); renderThumbs(); });
+    document.getElementById('main_image').addEventListener('click', () => { if (images.length) openViewer(images, imageIndex); });
+
+    function openViewer(imgs, start) {
+        viewerImages = imgs; viewerIndex = start;
+        renderViewer();
+        document.getElementById('image_viewer').classList.remove('hidden');
+        document.getElementById('image_viewer').classList.add('flex');
+    }
+    function closeViewer() {
+        document.getElementById('image_viewer').classList.add('hidden');
+        document.getElementById('image_viewer').classList.remove('flex');
+    }
+    function renderViewer() {
+        document.getElementById('viewer_image').src = viewerImages[viewerIndex];
+        document.getElementById('viewer_counter').textContent = `${viewerIndex + 1} / ${viewerImages.length}`;
+        document.getElementById('viewer_prev_btn').classList.toggle('hidden', viewerImages.length <= 1);
+        document.getElementById('viewer_next_btn').classList.toggle('hidden', viewerImages.length <= 1);
+    }
+    document.getElementById('viewer_close_btn').addEventListener('click', closeViewer);
+    document.getElementById('viewer_prev_btn').addEventListener('click', () => { viewerIndex = (viewerIndex - 1 + viewerImages.length) % viewerImages.length; renderViewer(); });
+    document.getElementById('viewer_next_btn').addEventListener('click', () => { viewerIndex = (viewerIndex + 1) % viewerImages.length; renderViewer(); });
+    let touchStartX = 0;
+    document.getElementById('image_viewer').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+    document.getElementById('image_viewer').addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(dx) < 40 || viewerImages.length <= 1) return;
+        viewerIndex = dx > 0 ? (viewerIndex - 1 + viewerImages.length) % viewerImages.length : (viewerIndex + 1) % viewerImages.length;
+        renderViewer();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
+
+    // ---- Reviews ----
+    function paintStarPicker(rating) {
+        document.querySelectorAll('.star-pick').forEach(btn => {
+            const val = Number(btn.getAttribute('data-value'));
+            btn.classList.toggle('text-yellow-500', val <= rating);
+            btn.classList.toggle('text-outline-variant', val > rating);
+            btn.style.fontVariationSettings = val <= rating ? "'FILL' 1" : "'FILL' 0";
+        });
+    }
+    document.querySelectorAll('.star-pick').forEach(btn => {
+        btn.addEventListener('click', () => { selectedReviewRating = Number(btn.getAttribute('data-value')); paintStarPicker(selectedReviewRating); });
+    });
+
+    async function loadReviews() {
+        const { data: reviews } = await supabaseClient
+            .from('reviews').select('*, profiles(full_name)').eq('product_id', productId).order('created_at', { ascending: false });
+
+        const { data: { user } } = await supabaseClient.auth.getUser();
+
+        [document.getElementById('rating_summary'), document.getElementById('grid_rating_summary')].forEach(el => el.classList.add('hidden'));
+
+        if (reviews && reviews.length > 0) {
+            const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+            document.getElementById('rating_stars').textContent = renderStars(avg);
+            document.getElementById('rating_text').textContent = `${avg.toFixed(1)} (${reviews.length})`;
+            document.getElementById('rating_summary').classList.remove('hidden');
+            document.getElementById('rating_summary').classList.add('flex');
+
+            document.getElementById('grid_rating_stars').textContent = renderStars(avg);
+            document.getElementById('grid_rating_text').textContent = `${avg.toFixed(1)} (${reviews.length} review${reviews.length > 1 ? 's' : ''})`;
+        }
+
+        const list = document.getElementById('reviews_list');
+        list.innerHTML = (reviews || []).map(r => `
+            <div class="p-sm bg-surface-container-low rounded-lg">
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-bold text-on-surface">${escapeHtml(r.profiles?.full_name || 'A buyer')}</p>
+                    <span class="text-yellow-500 text-xs">${renderStars(r.rating)}</span>
+                </div>
+                ${r.comment ? `<p class="text-sm text-on-surface-variant mt-1">${escapeHtml(r.comment)}</p>` : ''}
+            </div>
+        `).join('') || '<p class="text-sm text-on-surface-variant">No reviews yet — be the first to leave one.</p>';
+
+        selectedReviewRating = 0;
+        document.getElementById('review_comment_input').value = '';
+        paintStarPicker(0);
+        document.getElementById('review_form_label').textContent = 'Leave a review';
+        if (user) {
+            const mine = (reviews || []).find(r => r.buyer_id === user.id);
+            if (mine) {
+                selectedReviewRating = mine.rating;
+                paintStarPicker(mine.rating);
+                document.getElementById('review_comment_input').value = mine.comment || '';
+                document.getElementById('review_form_label').textContent = 'Update your review';
+            }
+        }
+    }
+
+    document.getElementById('submit_review_btn').addEventListener('click', async () => {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href); return; }
+        if (selectedReviewRating < 1) { alert('Please select a star rating first.'); return; }
+
+        const comment = document.getElementById('review_comment_input').value.trim();
+        const { error } = await supabaseClient.from('reviews').upsert({
+            product_id: productId, store_id: product.store_id, buyer_id: user.id,
+            rating: selectedReviewRating, comment: comment || null
+        }, { onConflict: 'product_id,buyer_id' });
+
+        if (error) { alert('Could not save your review: ' + error.message); return; }
+        loadReviews();
+    });
+
+    // ---- Contact seller ----
+    async function contactSeller() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href); return; }
+
+        if (!product.seller_id) { alert('This seller could not be reached right now.'); return; }
+
+        const { data: conversationId, error } = await supabaseClient.rpc('get_or_create_conversation', {
+            p_product_id: product.id, p_seller_id: product.seller_id, p_store_id: product.store_id
+        });
+        if (error) { alert('Could not start a conversation: ' + error.message); return; }
+
+        window.location.href = 'messages.html?conversation=' + conversationId;
+    }
+    document.getElementById('contact_seller_btn').addEventListener('click', contactSeller);
+    document.getElementById('sticky_contact_btn').addEventListener('click', contactSeller);
+
+    // ---- Presence heartbeat ----
+    async function heartbeat() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (user) await supabaseClient.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id);
+    }
+
+    // ---- Notification bell ----
+    async function loadBellNotifications() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return;
+        document.getElementById('notif_bell_wrap').classList.remove('hidden');
+
+        const { data: notifRows } = await supabaseClient.from('notifications').select('*').eq('user_id', user.id).eq('is_read', false).order('created_at', { ascending: false });
+        const { data: unreadMsgs } = await supabaseClient.from('messages').select('conversation_id, created_at').is('read_at', null).neq('sender_id', user.id);
+
+        const convMap = {};
+        (unreadMsgs || []).forEach(m => {
+            if (!convMap[m.conversation_id]) convMap[m.conversation_id] = { count: 0, latest: m.created_at };
+            convMap[m.conversation_id].count++;
+            if (m.created_at > convMap[m.conversation_id].latest) convMap[m.conversation_id].latest = m.created_at;
+        });
+
+        let convEntries = [];
+        const convIds = Object.keys(convMap);
+        if (convIds.length > 0) {
+            const { data: convs } = await supabaseClient.from('conversations').select('id, seller_id, seller:profiles!seller_id(full_name)').in('id', convIds);
+            convEntries = (convs || []).map(c => ({ type: 'message', id: c.id, text: `${convMap[c.id].count} new message${convMap[c.id].count > 1 ? 's' : ''} from ${c.seller?.full_name || 'a seller'}`, created_at: convMap[c.id].latest }));
+        }
+
+        const notifEntries = (notifRows || []).map(n => ({ type: 'notification', id: n.id, text: n.message, created_at: n.created_at }));
+        const combined = [...notifEntries, ...convEntries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        const badge = document.getElementById('notif_bell_badge');
+        const totalCount = (notifRows ? notifRows.length : 0) + (unreadMsgs ? unreadMsgs.length : 0);
+        if (totalCount > 0) { badge.textContent = totalCount > 99 ? '99+' : totalCount; badge.classList.remove('hidden'); badge.classList.add('flex'); }
+        else { badge.classList.add('hidden'); badge.classList.remove('flex'); }
+
+        const list = document.getElementById('notif_dropdown_list');
+        const emptyEl = document.getElementById('notif_dropdown_empty');
+        if (combined.length === 0) { list.innerHTML = ''; emptyEl.classList.remove('hidden'); return; }
+        emptyEl.classList.add('hidden');
+
+        list.innerHTML = combined.map(e => `
+            <button class="w-full text-left p-md hover:bg-surface-container-low border-b border-outline-variant/10 flex items-start gap-sm notif-item" data-type="${e.type}" data-id="${e.id}">
+                <span class="material-symbols-outlined text-primary text-lg flex-shrink-0">${e.type === 'message' ? 'chat' : 'notifications'}</span>
+                <span class="text-sm text-on-surface flex-1">${escapeHtml(e.text)}</span>
+            </button>
+        `).join('');
+
+        list.querySelectorAll('.notif-item').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const type = btn.getAttribute('data-type'), id = btn.getAttribute('data-id');
+                if (type === 'notification') { await supabaseClient.from('notifications').update({ is_read: true }).eq('id', id); loadBellNotifications(); }
+                else { window.location.href = 'messages.html?conversation=' + id; }
+            });
+        });
+    }
+
+    let bellChannelSubscribed = false;
+    async function subscribeBellRealtimeOnce() {
+        if (bellChannelSubscribed) return;
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) return;
+        bellChannelSubscribed = true;
+        supabaseClient.channel('bell-notifications')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => loadBellNotifications())
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => loadBellNotifications())
+            .subscribe();
+    }
+
+    document.getElementById('notif_bell_btn').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('notif_dropdown').classList.toggle('hidden'); });
+    document.addEventListener('click', (e) => { if (!document.getElementById('notif_bell_wrap').contains(e.target)) document.getElementById('notif_dropdown').classList.add('hidden'); });
+
+    init();
+</script>
+</body></html>
