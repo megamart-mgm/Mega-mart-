@@ -124,6 +124,13 @@ notifications
 </div>
 
 <p class="text-3xl font-bold text-primary" id="product_price"></p>
+<p class="hidden text-xs text-on-surface-variant -mt-2" id="tier_hint">Pick a package below</p>
+
+<!-- Service pricing tiers (Basic / Premium / Gold, etc.) -->
+<div class="hidden space-y-sm" id="tiers_wrap">
+<div class="grid grid-cols-3 gap-1 p-1 bg-surface-container-low rounded-lg" id="tier_tabs"></div>
+<div id="tier_details"></div>
+</div>
 
 <!-- Seller card -->
 <div class="flex items-center gap-sm p-sm bg-surface-container-low rounded-xl">
@@ -242,6 +249,41 @@ notifications
         document.getElementById('page_error').classList.remove('hidden');
     }
 
+    let selectedTierIndex = 0;
+
+    function renderTiers() {
+        const tiers = product.pricing_tiers;
+        document.getElementById('tiers_wrap').classList.remove('hidden');
+        document.getElementById('tiers_wrap').classList.add('block');
+        document.getElementById('tier_hint').classList.remove('hidden');
+
+        const tabs = document.getElementById('tier_tabs');
+        tabs.innerHTML = tiers.map((t, i) => `
+            <button class="tier-tab py-2 rounded-md text-xs font-bold ${i === selectedTierIndex ? 'bg-primary text-on-primary' : 'text-on-surface-variant'}" data-idx="${i}">
+                ${escapeHtml(t.name || 'Tier ' + (i + 1))}
+            </button>
+        `).join('');
+        tabs.querySelectorAll('.tier-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectedTierIndex = Number(btn.getAttribute('data-idx'));
+                renderTiers();
+            });
+        });
+
+        const tier = tiers[selectedTierIndex];
+        document.getElementById('tier_details').innerHTML = `
+            <div class="p-md border border-outline-variant/30 rounded-lg space-y-xs">
+                <p class="text-2xl font-bold text-primary">₦${Number(tier.price).toLocaleString()}</p>
+                ${tier.description ? `<p class="text-sm text-on-surface-variant">${escapeHtml(tier.description)}</p>` : ''}
+            </div>
+        `;
+
+        // Keep the big price display and mobile sticky bar in sync with the selected package
+        const priceText = `₦${Number(tier.price).toLocaleString()}`;
+        document.getElementById('product_price').textContent = priceText;
+        document.getElementById('sticky_price').textContent = priceText;
+    }
+
     function renderProduct() {
         document.getElementById('product_name').textContent = product.name;
         document.getElementById('product_price').textContent = formatPrice(product);
@@ -269,6 +311,10 @@ notifications
         if (product.delivery_timeline) {
             document.getElementById('delivery_text').textContent = '🚚 ' + product.delivery_timeline;
             document.getElementById('delivery_text').classList.remove('hidden');
+        }
+
+        if (product.product_type === 'service' && Array.isArray(product.pricing_tiers) && product.pricing_tiers.length > 0) {
+            renderTiers();
         }
 
         document.getElementById('seller_name').textContent = product.store_name || 'Mega Mart Seller';
@@ -428,6 +474,17 @@ notifications
             p_product_id: product.id, p_seller_id: product.seller_id, p_store_id: product.store_id
         });
         if (error) { alert('Could not start a conversation: ' + error.message); return; }
+
+        // If this is a service with packages, send an opening message naming
+        // exactly which package the buyer picked, so the seller isn't guessing.
+        if (product.product_type === 'service' && Array.isArray(product.pricing_tiers) && product.pricing_tiers.length > 0) {
+            const tier = product.pricing_tiers[selectedTierIndex];
+            await supabaseClient.from('messages').insert({
+                conversation_id: conversationId,
+                sender_id: user.id,
+                body: `Hi! I'm interested in the "${tier.name || 'Tier ' + (selectedTierIndex + 1)}" package (₦${Number(tier.price).toLocaleString()}) for "${product.name}".`
+            });
+        }
 
         window.location.href = 'messages.html?conversation=' + conversationId;
     }
