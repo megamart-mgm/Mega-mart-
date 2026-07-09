@@ -187,11 +187,20 @@ notifications
     }
 
     function renderCategoryBar() {
-        const cats = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)));
+        // Group categories case/whitespace-insensitively so "Website Development"
+        // and "website development" don't show up as two separate chips.
+        const normToDisplay = {};
+        allProducts.forEach(p => {
+            if (!p.category) return;
+            const norm = p.category.trim().toLowerCase();
+            if (!normToDisplay[norm]) normToDisplay[norm] = p.category.trim();
+        });
+        const cats = Object.values(normToDisplay);
+
         const bar = document.getElementById('category_bar');
         const chips = ['all', ...cats];
         bar.innerHTML = chips.map(c => `
-            <button class="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border cat-chip ${selectedCategory === c ? 'bg-primary text-on-primary border-primary' : 'bg-white text-on-surface-variant border-outline-variant'}" data-cat="${c}">
+            <button class="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold border cat-chip ${selectedCategory.toLowerCase() === c.toLowerCase() ? 'bg-primary text-on-primary border-primary' : 'bg-white text-on-surface-variant border-outline-variant'}" data-cat="${c}">
                 ${c === 'all' ? 'All' : c}
             </button>
         `).join('');
@@ -206,7 +215,8 @@ notifications
     function applyFilters() {
         const q = document.getElementById('search_input').value.toLowerCase();
         filteredProducts = allProducts.filter(p => {
-            const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+            const matchesCategory = selectedCategory === 'all' ||
+                (p.category && p.category.trim().toLowerCase() === selectedCategory.trim().toLowerCase());
             const matchesSearch = !q ||
                 p.name.toLowerCase().includes(q) ||
                 (p.category || '').toLowerCase().includes(q) ||
