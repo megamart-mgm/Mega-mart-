@@ -264,12 +264,12 @@ notifications
                 <div class="relative aspect-square rounded-lg overflow-hidden bg-surface-container mb-sm">
                     ${p.image_urls && p.image_urls[0] ? `<img class="w-full h-full object-cover" src="${p.image_urls[0]}" />` : '<div class="w-full h-full flex items-center justify-center text-on-surface-variant"><span class="material-symbols-outlined">image</span></div>'}
                     ${p.plan !== 'free' ? `<span class="absolute top-2 left-2 bg-primary text-on-primary badge-approved">${p.plan.toUpperCase()}</span>` : ''}
+                    <div class="absolute bottom-2 left-2 w-8 h-8 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md ring-2 ring-white" title="${(p.store_name || 'Seller').replace(/"/g, '&quot;')}">
+                        ${p.store_logo_url ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-[16px] text-tertiary">storefront</span>'}
+                    </div>
                 </div>
                 <h3 class="font-label-md text-on-surface line-clamp-1 mb-xs">${p.name}</h3>
                 <div class="flex items-center gap-1 mb-xs">
-                    <div class="w-5 h-5 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
-                        ${p.store_logo_url ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-[12px] text-tertiary">storefront</span>'}
-                    </div>
                     <p class="text-label-sm text-on-surface-variant truncate">${p.store_name || ''}</p>
                     ${p.store_is_verified ? '<span class="material-symbols-outlined text-primary text-[14px]" title="Verified Seller" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}
                 </div>
