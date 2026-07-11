@@ -297,6 +297,8 @@
 
     let currentUser = null;
     let existingStoreId = null;
+    let pendingLogoFile = null;
+    let currentLogoUrl = null;
 
     const fields = [
         'store_name', 'store_username', 'contact_email', 'store_description',
@@ -407,6 +409,27 @@
 
     document.getElementById('store_username').addEventListener('input', updateStoreUrlPreview);
 
+    document.getElementById('logo_input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showLoadError('Please choose an image file for your store logo.');
+            e.target.value = '';
+            return;
+        }
+        if (file.size > 3 * 1024 * 1024) {
+            showLoadError('Your logo image must be under 3MB.');
+            e.target.value = '';
+            return;
+        }
+
+        clearLoadError();
+        pendingLogoFile = file;
+        document.getElementById('logo_preview').innerHTML =
+            `<img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover" />`;
+    });
+
     async function loadStore() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
@@ -445,6 +468,7 @@
                 document.getElementById('cross_sell_basis').value = data.cross_sell_basis;
             }
             if (data.logo_url) {
+                currentLogoUrl = data.logo_url;
                 document.getElementById('logo_preview').innerHTML =
                     `<img src="${data.logo_url}" class="w-full h-full object-cover" />`;
             }
@@ -472,7 +496,28 @@
         saveBtn.disabled = true;
         saveBtn.textContent = 'Saving...';
 
-        const payload = { seller_id: currentUser.id };
+        // Upload a new logo if the seller picked one this session
+        if (pendingLogoFile) {
+            saveBtn.textContent = 'Uploading logo...';
+            const ext = pendingLogoFile.name.split('.').pop();
+            const path = `${currentUser.id}/logo-${crypto.randomUUID()}.${ext}`;
+            const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(path, pendingLogoFile);
+
+            if (uploadError) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Settings';
+                showLoadError('Could not upload your logo: ' + uploadError.message);
+                return;
+            }
+
+            const { data: publicUrlData } = supabaseClient.storage.from('avatars').getPublicUrl(path);
+            currentLogoUrl = publicUrlData.publicUrl;
+            pendingLogoFile = null;
+        }
+
+        saveBtn.textContent = 'Saving...';
+
+        const payload = { seller_id: currentUser.id, logo_url: currentLogoUrl };
         fields.forEach((f) => {
             const el = document.getElementById(f);
             if (el) payload[f] = el.value || null;
