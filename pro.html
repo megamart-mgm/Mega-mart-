@@ -153,6 +153,11 @@ notifications
 <span class="material-symbols-outlined">chat</span> Contact Seller
 </button>
 
+<div class="hidden p-sm bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2" id="service_trust_tip">
+<span class="material-symbols-outlined text-amber-600 text-lg flex-shrink-0">lightbulb</span>
+<p class="text-xs text-amber-900">Before paying for a service, ask the seller to share samples of their previous work in chat — a trustworthy seller will always be happy to show you.</p>
+</div>
+
 <p class="hidden text-xs text-on-surface-variant" id="delivery_text"></p>
 </div>
 </div>
@@ -315,6 +320,10 @@ notifications
 
         if (product.product_type === 'service' && Array.isArray(product.pricing_tiers) && product.pricing_tiers.length > 0) {
             renderTiers();
+        }
+
+        if (product.product_type === 'service') {
+            document.getElementById('service_trust_tip').classList.remove('hidden');
         }
 
         document.getElementById('seller_name').textContent = product.store_name || 'Mega Mart Seller';
