@@ -5,7 +5,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Store Settings | Mega Mart</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script id="tailwind-config">
       tailwind.config = {
@@ -58,6 +58,9 @@
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .input-focus:focus { outline: none; border-color: #006b2c; box-shadow: 0 0 0 3px rgba(0, 107, 44, 0.15); }
         .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
+        .field-error { border-color: #ba1a1a !important; box-shadow: 0 0 0 3px rgba(186, 26, 26, 0.12); }
+        .field-error-msg { color: #93000a; font-size: 12px; margin-top: 4px; display: none; }
+        .field-error-msg.active { display: block; }
 
         /* Toggle switch */
         .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
@@ -101,13 +104,15 @@
 </div>
 
 <div class="space-y-xs">
-<label class="block font-label-md text-label-md text-on-surface-variant" for="store_name">Store Name</label>
+<label class="block font-label-md text-label-md text-on-surface-variant" for="store_name">Store Name <span class="text-error">*</span></label>
 <input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="store_name" placeholder="e.g. Wealth Vault" type="text"/>
+<p class="field-error-msg" id="store_name_error">Please enter a store name — buyers need this to know who they're buying from.</p>
 </div>
 
 <div class="space-y-xs">
-<label class="block font-label-md text-label-md text-on-surface-variant" for="store_username">Store Username</label>
+<label class="block font-label-md text-label-md text-on-surface-variant" for="store_username">Store Username <span class="text-error">*</span></label>
 <input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="store_username" placeholder="e.g. wealthvault" type="text"/>
+<p class="field-error-msg" id="store_username_error">Please choose a username — this becomes your store's web address.</p>
 </div>
 
 <div class="space-y-xs">
@@ -144,8 +149,9 @@
 <input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="support_phone" placeholder="+234..." type="tel"/>
 </div>
 <div class="space-y-xs mt-sm">
-<label class="block font-label-md text-label-md text-on-surface-variant" for="whatsapp_number">WhatsApp Number <span class="font-normal normal-case text-tertiary">(shown to interested buyers)</span></label>
+<label class="block font-label-md text-label-md text-on-surface-variant" for="whatsapp_number">WhatsApp Number <span class="text-error">*</span> <span class="font-normal normal-case text-tertiary">(shown to interested buyers)</span></label>
 <input class="w-full h-12 px-4 bg-white border border-[#E2E8F0] rounded-lg input-focus font-body-md text-body-md" id="whatsapp_number" placeholder="+234..." type="tel"/>
+<p class="field-error-msg" id="whatsapp_number_error">Please add a WhatsApp number — buyers won't be able to reach you without it.</p>
 </div>
 </div>
 </section>
@@ -305,10 +311,90 @@
         'enable_course_comments', 'enable_affiliate_network'
     ];
 
+    // Fields a store genuinely can't function without, checked before we
+    // even try to save — and used to translate a raw database error into
+    // plain English if one somehow still gets through.
+    const REQUIRED_FIELDS = ['store_name', 'store_username', 'whatsapp_number'];
+    const FIELD_LABELS = {
+        store_name: 'Store Name',
+        store_username: 'Store Username',
+        contact_email: 'Email Address',
+        store_description: 'Store Description',
+        whatsapp_number: 'WhatsApp Number',
+        support_phone: 'Phone Number',
+        seller_id: 'Seller Account'
+    };
+
     function showLoadError(message) {
         const box = document.getElementById('load_error');
         document.getElementById('load_error_text').textContent = message;
         box.classList.remove('hidden');
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function clearLoadError() {
+        document.getElementById('load_error').classList.add('hidden');
+    }
+
+    function clearFieldErrors() {
+        REQUIRED_FIELDS.forEach((f) => {
+            const el = document.getElementById(f);
+            const msg = document.getElementById(f + '_error');
+            if (el) el.classList.remove('field-error');
+            if (msg) msg.classList.remove('active');
+        });
+    }
+
+    // Clear a field's red state the moment the person starts fixing it —
+    // much friendlier than making them hit Save again to find out.
+    REQUIRED_FIELDS.forEach((f) => {
+        const el = document.getElementById(f);
+        if (el) {
+            el.addEventListener('input', () => {
+                el.classList.remove('field-error');
+                const msg = document.getElementById(f + '_error');
+                if (msg) msg.classList.remove('active');
+            });
+        }
+    });
+
+    // Returns a list of missing field labels, and visibly marks each empty
+    // required field so the person can SEE exactly what to fix — not just
+    // read about it in a banner up top.
+    function validateRequiredFields() {
+        const missingLabels = [];
+        let firstMissingEl = null;
+
+        REQUIRED_FIELDS.forEach((f) => {
+            const el = document.getElementById(f);
+            if (!el) return;
+            if (!el.value.trim()) {
+                missingLabels.push(FIELD_LABELS[f] || f);
+                el.classList.add('field-error');
+                const msg = document.getElementById(f + '_error');
+                if (msg) msg.classList.add('active');
+                if (!firstMissingEl) firstMissingEl = el;
+            }
+        });
+
+        if (firstMissingEl) firstMissingEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return missingLabels;
+    }
+
+    // Safety net: if a raw Postgres error still comes back (e.g. a
+    // not-null constraint on a field we didn't anticipate, or a duplicate
+    // username), translate it into something a non-technical seller
+    // actually understands instead of showing the database's own wording.
+    function friendlyDbError(error) {
+        const nullMatch = error.message.match(/null value in column "([a-zA-Z_]+)"/);
+        if (nullMatch) {
+            const label = FIELD_LABELS[nullMatch[1]] || nullMatch[1].replace(/_/g, ' ');
+            return `Please fill in "${label}" before saving — it can't be left empty.`;
+        }
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+            return 'That store username is already taken by another seller — please choose a different one.';
+        }
+        return 'Could not save settings: ' + error.message;
     }
 
     function updateStoreUrlPreview() {
@@ -369,6 +455,19 @@
     async function saveStore() {
         if (!currentUser) return;
 
+        clearLoadError();
+        clearFieldErrors();
+
+        const missing = validateRequiredFields();
+        if (missing.length > 0) {
+            showLoadError(
+                missing.length === 1
+                    ? `Please fill in "${missing[0]}" before saving — it's marked in red below.`
+                    : `A few required fields are missing before you can save: ${missing.join(', ')}. They're marked in red below.`
+            );
+            return;
+        }
+
         const saveBtn = document.getElementById('save_btn');
         saveBtn.disabled = true;
         saveBtn.textContent = 'Saving...';
@@ -394,7 +493,7 @@
         saveBtn.textContent = 'Save Settings';
 
         if (error) {
-            showLoadError('Could not save settings: ' + error.message);
+            showLoadError(friendlyDbError(error));
             return;
         }
 
