@@ -251,6 +251,13 @@ notifications
         if (currentPage < totalPages - 1) { currentPage++; renderPage(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     });
 
+    function trustBadge(p) {
+        if (p.store_is_verified) return '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 flex-shrink-0">Verified Pro</span>';
+        if (p.plan === 'gold') return '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">Top Rated</span>';
+        if (p.plan === 'pro') return '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary flex-shrink-0">Pro Seller</span>';
+        return '';
+    }
+
     function renderGrid(products) {
         const grid = document.getElementById('product_grid');
 
@@ -260,46 +267,34 @@ notifications
         }
 
         grid.innerHTML = products.map(p => `
-            <div class="product-card bg-surface-container-lowest rounded-xl p-sm shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col" id="product-${p.id}" data-product-id="${p.id}">
-                <div class="relative aspect-square rounded-lg overflow-hidden bg-surface-container mb-sm">
+            <div class="product-card bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col" id="product-${p.id}" data-product-id="${p.id}">
+                <div class="relative aspect-[4/3] bg-surface-container">
                     ${p.image_urls && p.image_urls[0] ? `<img class="w-full h-full object-cover" src="${p.image_urls[0]}" />` : '<div class="w-full h-full flex items-center justify-center text-on-surface-variant"><span class="material-symbols-outlined">image</span></div>'}
-                    ${p.plan !== 'free' ? `<span class="absolute top-2 left-2 bg-primary text-on-primary badge-approved">${p.plan.toUpperCase()}</span>` : ''}
-                    <div class="absolute bottom-2 left-2 w-8 h-8 rounded-full bg-white overflow-hidden flex items-center justify-center shadow-md ring-2 ring-white" title="${(p.store_name || 'Seller').replace(/"/g, '&quot;')}">
-                        ${p.store_logo_url ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-[16px] text-tertiary">storefront</span>'}
+                </div>
+                <div class="p-sm flex flex-col flex-1">
+                    <div class="flex items-center gap-1 mb-xs">
+                        <div class="w-5 h-5 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
+                            ${p.store_logo_url ? `<img src="${p.store_logo_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-[12px] text-tertiary">storefront</span>'}
+                        </div>
+                        <p class="text-xs font-bold text-on-surface truncate flex-1">${p.store_name || ''}</p>
+                        ${trustBadge(p)}
                     </div>
+                    <p class="text-sm text-on-surface line-clamp-2 mb-xs leading-snug">${p.name}</p>
+                    ${p.review_count > 0 ? `
+                    <div class="flex items-center gap-1 mb-xs">
+                        <span class="material-symbols-outlined text-yellow-500 text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                        <span class="text-xs font-bold text-on-surface">${p.avg_rating}</span>
+                        <span class="text-xs text-on-surface-variant">(${p.review_count})</span>
+                    </div>` : ''}
+                    <p class="text-base font-bold text-on-surface mt-auto">${formatPrice(p)}</p>
                 </div>
-                <h3 class="font-label-md text-on-surface line-clamp-1 mb-xs">${p.name}</h3>
-                <div class="flex items-center gap-1 mb-xs">
-                    <p class="text-label-sm text-on-surface-variant truncate">${p.store_name || ''}</p>
-                    ${p.store_is_verified ? '<span class="material-symbols-outlined text-primary text-[14px]" title="Verified Seller" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}
-                </div>
-                ${p.review_count > 0 ? `
-                <div class="flex items-center gap-1 mb-xs">
-                    <span class="text-yellow-500 text-xs leading-none">${renderStars(p.avg_rating)}</span>
-                    <span class="text-[10px] text-on-surface-variant">${p.avg_rating} (${p.review_count})</span>
-                </div>` : ''}
-                <div class="flex justify-between items-center mt-auto pt-xs">
-                    <span class="font-headline-md text-primary text-base">${formatPrice(p)}</span>
-                </div>
-                <button class="w-full h-10 mt-sm bg-primary text-on-primary rounded-lg text-sm font-bold flex items-center justify-center gap-1 contact-seller-btn" data-id="${p.id}">
-                    <span class="material-symbols-outlined text-base">chat</span> Contact Seller
-                </button>
             </div>
         `).join('');
 
-        // Clicking anywhere on the card opens the full product page
+        // The whole card is the click target — no on-card button, just like the reference
         document.querySelectorAll('.product-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('.contact-seller-btn')) return;
+            card.addEventListener('click', () => {
                 window.location.href = 'pro.html?id=' + card.getAttribute('data-product-id');
-            });
-        });
-
-        // Contact Seller jumps straight into an in-site chat with them
-        document.querySelectorAll('.contact-seller-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                contactSeller(btn.getAttribute('data-id'));
             });
         });
 
@@ -312,41 +307,6 @@ notifications
                 el.classList.add('highlight');
             }
         }
-    }
-
-    // ---------------------------------------------------------------
-    // Contact Seller — starts (or resumes) a real in-site conversation.
-    // Requires login; if not logged in, sends the person to log in and
-    // come straight back here to finish contacting the seller.
-    // ---------------------------------------------------------------
-    async function contactSeller(productId) {
-        const product = allProducts.find(p => p.id === productId);
-        if (!product) return;
-
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (!user) {
-            window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
-            return;
-        }
-
-        const sellerId = product.seller_id || product.store_seller_id;
-        if (!sellerId) {
-            alert('This seller could not be reached right now. Please try again shortly.');
-            return;
-        }
-
-        const { data: conversationId, error } = await supabaseClient.rpc('get_or_create_conversation', {
-            p_product_id: product.id,
-            p_seller_id: sellerId,
-            p_store_id: product.store_id
-        });
-
-        if (error) {
-            alert('Could not start a conversation: ' + error.message);
-            return;
-        }
-
-        window.location.href = 'messages.html?conversation=' + conversationId;
     }
 
     document.getElementById('search_input').addEventListener('input', applyFilters);
