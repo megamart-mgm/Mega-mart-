@@ -242,25 +242,6 @@
 </div>
 </main>
 
-<!-- Client / Seller selection modal -->
-<div class="modal-overlay" id="role_modal">
-<div class="w-full max-w-[420px] bg-surface-container-lowest rounded-xl shadow-sm p-xl border border-surface-container">
-<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-xs text-center">Welcome to Mega Mart!</h2>
-<p class="font-body-md text-body-md text-on-surface-variant text-center mb-lg">How do you want to use your account?</p>
-<div class="grid grid-cols-2 gap-md">
-<button class="role-card flex flex-col items-center gap-sm p-lg border-2 border-[#E2E8F0] rounded-lg bg-white" data-role="client" id="role_client_btn" type="button">
-<span class="material-symbols-outlined text-primary text-[32px]" data-icon="shopping_bag">shopping_bag</span>
-<span class="font-label-md text-label-md text-on-surface">I'm a Client</span>
-<span class="font-label-sm text-label-sm text-on-surface-variant text-center">I want to shop</span>
-</button>
-<button class="role-card flex flex-col items-center gap-sm p-lg border-2 border-[#E2E8F0] rounded-lg bg-white" data-role="seller" id="role_seller_btn" type="button">
-<span class="material-symbols-outlined text-primary text-[32px]" data-icon="storefront">storefront</span>
-<span class="font-label-md text-label-md text-on-surface">I'm a Seller</span>
-<span class="font-label-sm text-label-sm text-on-surface-variant text-center">I want to sell</span>
-</button>
-</div>
-</div>
-</div>
 
 <!-- Terms of Service modal -->
 <div class="modal-overlay" id="terms_modal">
@@ -427,7 +408,6 @@
     const submitBtnText = document.getElementById('submit_btn_text');
     const errorBanner = document.getElementById('form_error');
     const errorText = document.getElementById('form_error_text');
-    const roleModal = document.getElementById('role_modal');
 
     function showError(message) {
         errorText.textContent = message;
@@ -530,30 +510,26 @@
                 return;
             }
 
-            // Success — ask whether they're a client or a seller
-            roleModal.classList.add('active');
-            setLoading(false);
+            // Everyone starts as a buyer — "Become a Seller" (from the store
+            // menu) is the deliberate upgrade path, not a fork at signup.
+            if (data.user) {
+                try {
+                    await supabaseClient.from('profiles').update({ role: 'client' }).eq('id', data.user.id);
+                } catch (err) {
+                    console.error('Could not set default role:', err);
+                }
+
+                supabaseClient.functions.invoke('send-welcome-email', {
+                    body: { email: email, full_name: fullName, role: 'client' }
+                }).catch((err) => console.error('Welcome email failed to send:', err));
+            }
+
+            window.location.href = 'store.html';
         } catch (err) {
             showError('Something went wrong. Please try again.');
             grecaptcha.reset();
             setLoading(false);
         }
     });
-
-    async function chooseRole(role) {
-        try {
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            if (user) {
-                await supabaseClient.from('profiles').update({ role: role }).eq('id', user.id);
-            }
-        } catch (err) {
-            console.error('Could not save role:', err);
-        }
-
-        window.location.href = role === 'client' ? 'cli.html' : 'sel.html';
-    }
-
-    document.getElementById('role_client_btn').addEventListener('click', () => chooseRole('client'));
-    document.getElementById('role_seller_btn').addEventListener('click', () => chooseRole('seller'));
 </script>
 </body></html>
