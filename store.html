@@ -65,7 +65,14 @@ notifications
 <div id="notif_dropdown_list"></div>
 </div>
 </div>
-<a class="text-primary text-label-md font-bold hover:underline" href="login.html">Log In</a>
+<div class="relative flex-shrink-0" id="account_menu_wrap">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95" id="account_menu_btn">
+account_circle
+</button>
+<div class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-outline-variant/20 overflow-hidden z-[70]" id="account_dropdown">
+<div id="account_dropdown_list"></div>
+</div>
+</div>
 </div>
 </header>
 
@@ -453,9 +460,80 @@ notifications
         if (!wrap.contains(e.target)) document.getElementById('notif_dropdown').classList.add('hidden');
     });
 
+    // ---------------------------------------------------------------
+    // Account menu — detects whether someone is logged in (and as what
+    // role) and renders the right options. Re-checks live whenever auth
+    // state changes, so logging in/out in this tab updates it instantly.
+    // ---------------------------------------------------------------
+    let currentAuthUser = null;
+
+    async function refreshAccountMenu() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        currentAuthUser = user;
+        const list = document.getElementById('account_dropdown_list');
+
+        if (!user) {
+            list.innerHTML = `
+                <a href="login.html" class="block px-md py-sm text-sm text-on-surface hover:bg-surface-container-low">Log In</a>
+                <a href="signup.html" class="block px-md py-sm text-sm text-on-surface hover:bg-surface-container-low">Sign Up</a>
+            `;
+            return;
+        }
+
+        const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).maybeSingle();
+        const role = profile?.role || 'client';
+
+        let items = '';
+        if (role === 'seller') {
+            items += `<a href="sel.html" class="block px-md py-sm text-sm text-on-surface hover:bg-surface-container-low">Seller Dashboard</a>`;
+        } else {
+            items += `<a href="cli.html" class="block px-md py-sm text-sm text-on-surface hover:bg-surface-container-low">Dashboard</a>`;
+            items += `<a href="profile-settings.html" class="block px-md py-sm text-sm text-on-surface hover:bg-surface-container-low">Profile Settings</a>`;
+            items += `<button id="become_seller_btn" class="w-full text-left px-md py-sm text-sm text-primary font-bold hover:bg-surface-container-low">Become a Seller</button>`;
+        }
+        items += `<button id="logout_menu_btn" class="w-full text-left px-md py-sm text-sm text-error hover:bg-surface-container-low border-t border-outline-variant/10">Log Out</button>`;
+
+        list.innerHTML = items;
+
+        const becomeBtn = document.getElementById('become_seller_btn');
+        if (becomeBtn) becomeBtn.addEventListener('click', becomeSeller);
+
+        document.getElementById('logout_menu_btn').addEventListener('click', async () => {
+            await supabaseClient.auth.signOut();
+        });
+    }
+
+    async function becomeSeller() {
+        if (!currentAuthUser) return;
+        const { error } = await supabaseClient.from('profiles').update({ role: 'seller' }).eq('id', currentAuthUser.id);
+        if (error) { alert('Could not update your account: ' + error.message); return; }
+        alert("Great! Let's set up your store first — fill in your store details on the next page.");
+        window.location.href = 'store-settings.html?onboarding=1';
+    }
+
+    document.getElementById('account_menu_btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('account_dropdown').classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('account_menu_wrap');
+        if (!wrap.contains(e.target)) document.getElementById('account_dropdown').classList.add('hidden');
+    });
+
+    // Live detection: updates the menu the instant someone logs in or out
+    // (e.g. after signing in through the login page in the same tab, or if
+    // their session ends) without needing a manual page refresh.
+    supabaseClient.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            refreshAccountMenu();
+            loadBellNotifications();
+        }
+    });
+
     loadAnnouncement();
     loadProducts();
     loadBellNotifications();
     subscribeBellRealtimeOnce();
+    refreshAccountMenu();
 </script>
 </body></html>
