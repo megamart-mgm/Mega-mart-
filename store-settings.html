@@ -86,6 +86,11 @@
 <p class="font-label-md text-label-md text-on-error-container" id="load_error_text"></p>
 </div>
 
+<div id="onboarding_banner" class="hidden p-md bg-primary/10 border border-primary/30 rounded-lg">
+<p class="font-label-md text-label-md text-on-surface font-bold">Welcome! Let's set up your store 🎉</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Fill in the details below to open your store — you'll be taken straight to your dashboard once you save.</p>
+</div>
+
 <!-- Store Profile Settings -->
 <section class="section-card p-lg space-y-md">
 <div>
@@ -299,6 +304,7 @@
     let existingStoreId = null;
     let pendingLogoFile = null;
     let currentLogoUrl = null;
+    const isOnboarding = new URLSearchParams(window.location.search).get('onboarding') === '1';
 
     const fields = [
         'store_name', 'store_username', 'contact_email', 'store_description',
@@ -431,6 +437,10 @@
     });
 
     async function loadStore() {
+        if (isOnboarding) {
+            document.getElementById('onboarding_banner').classList.remove('hidden');
+        }
+
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
             window.location.href = 'signup.html';
@@ -492,6 +502,8 @@
             return;
         }
 
+        const wasNewStore = !existingStoreId;
+
         const saveBtn = document.getElementById('save_btn');
         saveBtn.disabled = true;
         saveBtn.textContent = 'Saving...';
@@ -543,6 +555,14 @@
         }
 
         const toast = document.getElementById('save_toast');
+
+        if (wasNewStore || isOnboarding) {
+            document.getElementById('save_toast_text').textContent = "Store created! Taking you to your dashboard...";
+            toast.classList.add('active');
+            setTimeout(() => { window.location.href = 'sel.html'; }, 1800);
+            return;
+        }
+
         toast.classList.add('active');
         setTimeout(() => toast.classList.remove('active'), 2500);
     }
