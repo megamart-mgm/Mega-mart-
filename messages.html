@@ -51,7 +51,7 @@
 
 <!-- Thread -->
 <section class="hidden md:flex flex-1 flex-col h-full min-w-0" id="thread_panel">
-<div class="flex items-center gap-sm px-sm sm:px-md h-14 border-b border-outline-variant/20 bg-surface-container-lowest flex-shrink-0">
+<div class="flex items-center gap-sm px-sm sm:px-md h-14 border-b border-outline-variant/20 bg-surface-container-lowest flex-shrink-0 cursor-pointer" id="thread_header_clickable">
 <button class="material-symbols-outlined md:hidden text-on-surface-variant flex-shrink-0" id="mobile_back_btn">arrow_back</button>
 <div class="w-9 h-9 rounded-full bg-surface-container-high overflow-hidden flex items-center justify-center flex-shrink-0" id="thread_avatar">
 <span class="material-symbols-outlined text-tertiary">person</span>
@@ -75,6 +75,22 @@
 </section>
 
 </main>
+
+<!-- Public profile view — like tapping a contact's name in WhatsApp -->
+<div class="fixed inset-0 bg-black/50 z-[85] hidden items-center justify-center p-md" id="profile_view_modal">
+<div class="w-full max-w-[360px] bg-white rounded-xl p-lg text-center relative">
+<button class="absolute top-3 right-3 material-symbols-outlined text-on-surface-variant" id="profile_view_close">close</button>
+<div class="w-20 h-20 rounded-full mx-auto overflow-hidden bg-surface-container-high flex items-center justify-center mb-sm" id="profile_view_avatar">
+<span class="material-symbols-outlined text-3xl text-tertiary">person</span>
+</div>
+<div class="flex items-center justify-center gap-1 mb-1">
+<h3 class="font-bold text-lg text-on-surface" id="profile_view_name"></h3>
+<span class="hidden material-symbols-outlined text-primary text-[18px]" id="profile_view_verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-md" id="profile_view_status"></p>
+<div class="text-left space-y-2 pt-md border-t border-outline-variant/20" id="profile_view_details"></div>
+</div>
+</div>
 
 <div class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-[60] max-w-[92vw]" id="toast">
 <span class="material-symbols-outlined text-primary flex-shrink-0">chat</span>
