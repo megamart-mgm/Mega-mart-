@@ -93,7 +93,19 @@ notifications
 </div>
 </div>
 
-<div class="p-md bg-surface-container-low rounded-xl mb-md">
+<!-- Shown when the buyer hasn't contacted the seller about this product yet -->
+<div class="hidden p-md bg-surface-container-low rounded-xl mb-md" id="review_locked_message">
+<p class="text-sm text-on-surface-variant">Contact the seller about this product first — once your order is complete, you'll be able to leave a rating and review here, just like Fiverr.</p>
+</div>
+
+<!-- Shown after they've contacted the seller but haven't confirmed completion -->
+<div class="hidden p-md bg-primary/5 border border-primary/20 rounded-xl mb-md" id="review_mark_complete_wrap">
+<p class="text-sm text-on-surface mb-xs">Received what you ordered? Confirm below to unlock leaving a review.</p>
+<button class="bg-primary text-on-primary px-md py-2 rounded-lg text-sm font-bold" id="mark_complete_btn">Mark Order as Completed</button>
+</div>
+
+<!-- Shown once the order is confirmed complete -->
+<div class="hidden p-md bg-surface-container-low rounded-xl mb-md" id="review_form_active">
 <p class="text-sm font-bold text-on-surface mb-xs" id="review_form_label">Leave a review</p>
 <div class="flex items-center gap-1 mb-xs" id="review_star_picker">
 <button class="star-pick material-symbols-outlined text-2xl text-outline-variant" data-value="1">star</button>
@@ -442,19 +454,66 @@ notifications
             </div>
         `).join('') || '<p class="text-sm text-on-surface-variant">No reviews yet — be the first to leave one.</p>';
 
+        await refreshReviewEligibility(user, reviews);
+    }
+
+    // Fiverr-style gating: a buyer can only review after they've actually
+    // contacted the seller about this product AND confirmed the order is
+    // complete. Three states: no conversation yet / awaiting completion /
+    // eligible to review.
+    async function refreshReviewEligibility(user, reviews) {
+        const lockedEl = document.getElementById('review_locked_message');
+        const completeWrapEl = document.getElementById('review_mark_complete_wrap');
+        const formEl = document.getElementById('review_form_active');
+        [lockedEl, completeWrapEl, formEl].forEach(el => el.classList.add('hidden'));
+
+        if (!user) {
+            lockedEl.classList.remove('hidden');
+            lockedEl.querySelector('p').textContent =
+                'Log in and contact the seller about this product first — once your order is complete, you can leave a review here.';
+            return;
+        }
+
+        const { data: conversation } = await supabaseClient
+            .from('conversations')
+            .select('id, completed_at')
+            .eq('buyer_id', user.id)
+            .eq('product_id', productId)
+            .maybeSingle();
+
+        if (!conversation) {
+            lockedEl.classList.remove('hidden');
+            lockedEl.querySelector('p').textContent =
+                "Contact the seller about this product first — once your order is complete, you'll be able to leave a rating and review here, just like Fiverr.";
+            return;
+        }
+
+        if (!conversation.completed_at) {
+            completeWrapEl.classList.remove('hidden');
+            document.getElementById('mark_complete_btn').onclick = () => markOrderCompleted(conversation.id);
+            return;
+        }
+
+        // Eligible — show the actual form, pre-filled if they already reviewed
+        formEl.classList.remove('hidden');
         selectedReviewRating = 0;
         document.getElementById('review_comment_input').value = '';
         paintStarPicker(0);
         document.getElementById('review_form_label').textContent = 'Leave a review';
-        if (user) {
-            const mine = (reviews || []).find(r => r.buyer_id === user.id);
-            if (mine) {
-                selectedReviewRating = mine.rating;
-                paintStarPicker(mine.rating);
-                document.getElementById('review_comment_input').value = mine.comment || '';
-                document.getElementById('review_form_label').textContent = 'Update your review';
-            }
+
+        const mine = (reviews || []).find(r => r.buyer_id === user.id);
+        if (mine) {
+            selectedReviewRating = mine.rating;
+            paintStarPicker(mine.rating);
+            document.getElementById('review_comment_input').value = mine.comment || '';
+            document.getElementById('review_form_label').textContent = 'Update your review';
         }
+    }
+
+    async function markOrderCompleted(conversationId) {
+        const { error } = await supabaseClient.rpc('mark_conversation_completed', { p_conversation_id: conversationId });
+        if (error) { alert('Could not mark this as completed: ' + error.message); return; }
+        loadReviews();
     }
 
     document.getElementById('submit_review_btn').addEventListener('click', async () => {
