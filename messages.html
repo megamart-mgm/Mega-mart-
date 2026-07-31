@@ -56,10 +56,17 @@
 <div class="w-9 h-9 rounded-full bg-surface-container-high overflow-hidden flex items-center justify-center flex-shrink-0" id="thread_avatar">
 <span class="material-symbols-outlined text-tertiary">person</span>
 </div>
-<div class="min-w-0">
+<div class="min-w-0 flex-1">
 <p class="font-bold text-on-surface truncate" id="thread_name">Select a conversation</p>
 <p class="text-xs text-on-surface-variant truncate" id="thread_product"></p>
 </div>
+<span class="hidden material-symbols-outlined text-on-surface-variant text-lg flex-shrink-0" id="thread_completed_check" title="Marked complete" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+
+<!-- Request Completed banner (buyer only, on their own conversations) -->
+<div class="hidden px-sm sm:px-md py-sm bg-surface-container-low border-b border-outline-variant/20 flex-shrink-0 flex items-center justify-between gap-sm" id="completion_bar">
+<p class="text-xs text-on-surface-variant flex-1" id="completion_bar_text">Once the seller has delivered, mark this as completed so you can leave a review.</p>
+<button class="flex-shrink-0 bg-primary text-on-primary px-md py-1.5 rounded-lg text-xs font-bold" id="mark_complete_btn">Request Completed</button>
 </div>
 
 <div class="flex-1 overflow-y-auto p-sm sm:p-md space-y-sm" id="message_list"></div>
@@ -209,12 +216,13 @@
             const isBuyer = c.buyer_id === currentUser.id;
             const otherName = isBuyer ? (c.seller?.full_name || 'Seller') : (c.buyer?.full_name || 'Buyer');
             const otherAvatar = isBuyer ? c.seller?.avatar_url : c.buyer?.avatar_url;
+            const otherId = isBuyer ? c.seller_id : c.buyer_id;
             const productName = c.products?.name || '';
             const thumb = c.products?.image_urls?.[0];
             const unread = unreadCounts[c.id] || 0;
             totalUnread += unread;
 
-            conversationCache[c.id] = { otherName, productName, otherAvatar };
+            conversationCache[c.id] = { otherName, productName, otherAvatar, otherId, isBuyer, completedAt: c.completed_at };
 
             return `
                 <button class="conv-item w-full text-left p-sm sm:p-md flex items-center gap-sm hover:bg-surface-container-low transition-colors" data-id="${c.id}">
@@ -262,9 +270,95 @@
 
         document.getElementById('composer').classList.remove('hidden');
 
+        showCompletionState(!!(cached && cached.completedAt));
+
         await loadMessages(conversationId);
         await loadConversations(); // refresh unread badges now that this thread is being read
     }
+
+    // ---------------------------------------------------------------
+    // Request Completed — buyer-only. Fiverr-style: reviews are gated on
+    // this, checked server-side by the mark_conversation_completed() RPC
+    // and the reviews insert policy (see Part 16 SQL).
+    // ---------------------------------------------------------------
+    function showCompletionState(completed) {
+        document.getElementById('thread_completed_check').classList.toggle('hidden', !completed);
+        const cached = conversationCache[activeConversation];
+        const bar = document.getElementById('completion_bar');
+        if (cached && cached.isBuyer && !completed) {
+            bar.classList.remove('hidden');
+            bar.classList.add('flex');
+        } else {
+            bar.classList.add('hidden');
+            bar.classList.remove('flex');
+        }
+    }
+
+    document.getElementById('mark_complete_btn').addEventListener('click', async () => {
+        if (!activeConversation) return;
+        if (!confirm("Mark this request as completed? You'll then be able to leave a review for this product.")) return;
+
+        const { error } = await supabaseClient.rpc('mark_conversation_completed', { p_conversation_id: activeConversation });
+        if (error) { alert('Could not mark as completed: ' + error.message); return; }
+
+        if (conversationCache[activeConversation]) {
+            conversationCache[activeConversation].completedAt = new Date().toISOString();
+        }
+        showCompletionState(true);
+        showToast('Marked as completed — you can now leave a review!');
+    });
+
+    // ---------------------------------------------------------------
+    // Public profile viewer — tap the header (name/avatar), like tapping
+    // a contact in WhatsApp, to see the other person's public details.
+    // Sellers show their public store info (name, WhatsApp, verified).
+    // Buyers show only what they've chosen to add in Profile Settings.
+    // ---------------------------------------------------------------
+    async function openProfileViewer() {
+        const cached = conversationCache[activeConversation];
+        if (!cached || !cached.otherId) return;
+
+        document.getElementById('profile_view_avatar').innerHTML = cached.otherAvatar
+            ? `<img src="${cached.otherAvatar}" class="w-full h-full object-cover" />`
+            : '<span class="material-symbols-outlined text-3xl text-tertiary">person</span>';
+        document.getElementById('profile_view_name').textContent = cached.otherName;
+        document.getElementById('profile_view_verified').classList.add('hidden');
+        document.getElementById('profile_view_details').innerHTML = '<p class="text-sm text-on-surface-variant text-center">Loading...</p>';
+
+        document.getElementById('profile_view_modal').classList.remove('hidden');
+        document.getElementById('profile_view_modal').classList.add('flex');
+
+        const { data: profile } = await supabaseClient
+            .from('profiles').select('last_seen_at, phone_number, location').eq('id', cached.otherId).maybeSingle();
+
+        const online = profile?.last_seen_at && (Date.now() - new Date(profile.last_seen_at).getTime()) < 2 * 60 * 1000;
+        document.getElementById('profile_view_status').textContent = online ? 'Online now' : 'Offline';
+
+        let detailsHtml = '';
+
+        if (cached.isBuyer) {
+            // Other participant is the SELLER — show their public store info
+            const { data: store } = await supabaseClient
+                .from('stores').select('store_name, whatsapp_number, is_verified').eq('seller_id', cached.otherId).maybeSingle();
+
+            document.getElementById('profile_view_verified').classList.toggle('hidden', !store?.is_verified);
+            if (store?.store_name) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">Store</span><span class="font-bold text-on-surface">${escapeHtml(store.store_name)}</span></p>`;
+            if (store?.whatsapp_number) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">WhatsApp</span><span class="font-bold text-on-surface">${escapeHtml(store.whatsapp_number)}</span></p>`;
+        } else {
+            // Other participant is the BUYER — only what they've chosen to share
+            if (profile?.phone_number) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">Phone</span><span class="font-bold text-on-surface">${escapeHtml(profile.phone_number)}</span></p>`;
+            if (profile?.location) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">Location</span><span class="font-bold text-on-surface">${escapeHtml(profile.location)}</span></p>`;
+        }
+
+        document.getElementById('profile_view_details').innerHTML = detailsHtml ||
+            '<p class="text-sm text-on-surface-variant text-center">No additional public details shared.</p>';
+    }
+
+    document.getElementById('thread_header_clickable').addEventListener('click', openProfileViewer);
+    document.getElementById('profile_view_close').addEventListener('click', () => {
+        document.getElementById('profile_view_modal').classList.add('hidden');
+        document.getElementById('profile_view_modal').classList.remove('flex');
+    });
 
     async function loadMessages(conversationId) {
         const { data, error } = await supabaseClient
