@@ -110,6 +110,45 @@
 </div>
 </section>
 
+<!-- Seller identity verification requests -->
+<section class="section-card p-sm sm:p-lg space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Seller Verification Requests</h2>
+<div class="space-y-sm" id="verifications_list">
+<p class="text-on-surface-variant">Loading...</p>
+</div>
+</section>
+
+<!-- Verification detail modal -->
+<div class="fixed inset-0 bg-black/50 z-[85] hidden items-center justify-center p-md" id="verification_detail_modal">
+<div class="w-full max-w-[480px] bg-white rounded-xl p-lg space-y-md max-h-[90vh] overflow-y-auto">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-md text-headline-md text-on-surface">Review Documents</h3>
+<button class="material-symbols-outlined text-on-surface-variant" id="verification_detail_close">close</button>
+</div>
+<p class="text-sm text-on-surface-variant" id="verification_detail_seller"></p>
+<div>
+<p class="text-xs font-bold text-on-surface-variant mb-1">ID Document</p>
+<img class="w-full rounded-lg border border-outline-variant/30" id="verification_id_image" alt="ID document"/>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant mb-1">Selfie</p>
+<img class="w-full rounded-lg border border-outline-variant/30" id="verification_selfie_image" alt="Selfie"/>
+</div>
+<div class="flex gap-sm pt-sm">
+<button class="flex-1 bg-primary text-on-primary py-2 rounded-lg font-bold" id="verification_approve_btn">Approve — Grant Badge</button>
+<button class="flex-1 bg-error-container text-on-error-container py-2 rounded-lg font-bold" id="verification_reject_btn">Reject</button>
+</div>
+</div>
+</div>
+
+<!-- Verified sellers -->
+<section class="section-card p-sm sm:p-lg space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Stores &amp; Verification</h2>
+<div class="space-y-sm" id="stores_list">
+<p class="text-on-surface-variant">Loading...</p>
+</div>
+</section>
+
 <!-- Announcement composer -->
 <section class="section-card p-sm sm:p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Post an Announcement</h2>
@@ -172,6 +211,119 @@
         console.error('[Control Room] Access denied:', reason);
     }
 
+    let activeVerificationId = null;
+
+    async function loadVerifications() {
+        const { data, error } = await supabaseClient
+            .from('seller_verifications')
+            .select('*, stores(store_name), profiles!seller_id(full_name)')
+            .eq('review_status', 'pending_review')
+            .order('documents_submitted_at', { ascending: true });
+
+        const list = document.getElementById('verifications_list');
+        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">Nothing waiting for review.</p>'; return; }
+
+        list.innerHTML = data.map(v => `
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
+                <div class="min-w-0">
+                    <p class="font-label-md text-on-surface truncate">${v.stores ? v.stores.store_name : 'Unknown store'}</p>
+                    <p class="text-label-sm text-on-surface-variant">${v.profiles ? v.profiles.full_name : ''} · submitted ${new Date(v.documents_submitted_at).toLocaleDateString()}</p>
+                </div>
+                <button class="flex-shrink-0 bg-primary text-on-primary px-md py-2 sm:py-1 rounded-lg text-sm font-bold view-verification-btn" data-id="${v.id}">Review</button>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.view-verification-btn').forEach(btn => {
+            btn.addEventListener('click', () => openVerificationDetail(btn.getAttribute('data-id'), data));
+        });
+    }
+
+    async function openVerificationDetail(verificationId, cachedList) {
+        const v = cachedList.find(x => x.id === verificationId);
+        if (!v) return;
+        activeVerificationId = verificationId;
+
+        document.getElementById('verification_detail_seller').textContent =
+            `${v.stores ? v.stores.store_name : 'Unknown store'} — ${v.profiles ? v.profiles.full_name : ''}`;
+
+        // Bucket is private — generate short-lived signed URLs to actually view the images
+        const { data: idSigned } = await supabaseClient.storage.from('verification-documents').createSignedUrl(v.id_document_url, 300);
+        const { data: selfieSigned } = await supabaseClient.storage.from('verification-documents').createSignedUrl(v.selfie_url, 300);
+
+        document.getElementById('verification_id_image').src = idSigned ? idSigned.signedUrl : '';
+        document.getElementById('verification_selfie_image').src = selfieSigned ? selfieSigned.signedUrl : '';
+
+        document.getElementById('verification_detail_modal').classList.remove('hidden');
+        document.getElementById('verification_detail_modal').classList.add('flex');
+    }
+
+    function closeVerificationDetail() {
+        document.getElementById('verification_detail_modal').classList.add('hidden');
+        document.getElementById('verification_detail_modal').classList.remove('flex');
+        activeVerificationId = null;
+    }
+
+    document.getElementById('verification_detail_close').addEventListener('click', closeVerificationDetail);
+
+    document.getElementById('verification_approve_btn').addEventListener('click', async () => {
+        if (!activeVerificationId) return;
+        const { error } = await supabaseClient.rpc('admin_approve_verification', { p_verification_id: activeVerificationId });
+        if (error) { showError(error.message); return; }
+        showToast('Approved — seller now has the Verified Seller badge.');
+        closeVerificationDetail();
+        loadVerifications();
+        loadStores();
+    });
+
+    document.getElementById('verification_reject_btn').addEventListener('click', async () => {
+        if (!activeVerificationId) return;
+        const reason = prompt('Reason for rejection (shown to the seller):');
+        if (reason === null) return;
+        const { error } = await supabaseClient.rpc('admin_reject_verification', { p_verification_id: activeVerificationId, p_reason: reason || null });
+        if (error) { showError(error.message); return; }
+        showToast('Rejected — seller notified and can resubmit.');
+        closeVerificationDetail();
+        loadVerifications();
+    });
+
+    async function loadStores() {
+        const { data, error } = await supabaseClient
+            .from('stores')
+            .select('id, store_name, plan, is_verified')
+            .order('store_name', { ascending: true });
+
+        const list = document.getElementById('stores_list');
+        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">No stores yet.</p>'; return; }
+
+        list.innerHTML = data.map(s => `
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
+                <div class="min-w-0 flex items-center gap-xs">
+                    <p class="font-label-md text-on-surface truncate">${s.store_name || 'Unnamed store'}</p>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant uppercase">${s.plan}</span>
+                    ${s.is_verified ? '<span class="material-symbols-outlined text-primary text-base" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}
+                </div>
+                <button class="flex-shrink-0 px-md py-2 sm:py-1 rounded-lg text-sm font-bold ${s.is_verified ? 'bg-error-container text-on-error-container' : 'bg-primary text-on-primary'} verify-toggle-btn" data-id="${s.id}" data-verified="${s.is_verified}">
+                    ${s.is_verified ? 'Remove Verification' : 'Mark Verified'}
+                </button>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.verify-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const currentlyVerified = btn.getAttribute('data-verified') === 'true';
+                const { error } = await supabaseClient.rpc('admin_set_store_verified', {
+                    p_store_id: btn.getAttribute('data-id'),
+                    p_verified: !currentlyVerified
+                });
+                if (error) { showError(error.message); return; }
+                showToast(currentlyVerified ? 'Verification removed.' : 'Store marked as verified.');
+                loadStores();
+            });
+        });
+    }
+
     async function checkAdminAndEnter(user) {
         const { data: profile, error } = await supabaseClient
             .from('profiles')
@@ -188,6 +340,7 @@
         loadStats();
         loadPending();
         loadUpgrades();
+        loadStores();
     }
 
     document.getElementById('login_btn').addEventListener('click', async () => {
