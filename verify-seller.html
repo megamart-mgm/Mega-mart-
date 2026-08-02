@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Get Verified | Mega Mart</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script id="tailwind-config">
+      tailwind.config = { darkMode: "class", theme: { extend: {
+        "colors": {
+          "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+          "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+          "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a", "error-container": "#ffdad6",
+          "on-error-container": "#93000a"
+        },
+        "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px" }
+      }}}
+    </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
+    #toast { display: none; } #toast.active { display: flex; }
+</style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
+<a class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95" href="sel.html">arrow_back</a>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Get Verified</span>
+</header>
+
+<main class="mt-20 px-md max-w-[560px] mx-auto space-y-lg">
+
+<div class="hidden p-md bg-error-container rounded-lg" id="form_error">
+<p class="font-label-md text-label-md text-on-error-container" id="form_error_text"></p>
+</div>
+
+<div id="loading_state" class="text-center py-2xl text-on-surface-variant">Loading...</div>
+
+<!-- State: not started -->
+<div class="hidden space-y-lg" id="state_not_started">
+<section class="section-card p-lg space-y-md text-center">
+<span class="material-symbols-outlined text-primary text-5xl">verified</span>
+<h2 class="text-xl font-bold text-on-surface">Become a Verified Seller</h2>
+<p class="text-sm text-on-surface-variant">Show buyers you're trustworthy with a green Verified Seller badge on your store and every listing.</p>
+</section>
+<section class="section-card p-lg space-y-sm">
+<h3 class="font-bold text-on-surface">What you'll need</h3>
+<ul class="text-sm text-on-surface-variant space-y-2 list-disc pl-lg">
+<li>A valid government-issued ID (NIN slip, driver's license, voter's card, or international passport)</li>
+<li>A clear selfie of yourself, taken in good lighting, face fully visible</li>
+<li>A one-time verification fee of <strong class="text-on-surface">₦3,000</strong></li>
+</ul>
+<p class="text-xs text-on-surface-variant">Our team manually reviews every submission — usually within 24–48 hours. Your badge stays valid for 365 days, after which you'll re-submit your documents (no extra charge) to renew.</p>
+</section>
+<button class="w-full h-[52px] bg-primary text-on-primary rounded-lg font-bold shadow-sm active:scale-[0.98] transition-all" id="pay_verify_btn">Get Verified Now — ₦3,000</button>
+</div>
+
+<!-- State: payment made, waiting for webhook confirmation -->
+<div class="hidden text-center py-2xl space-y-md" id="state_confirming">
+<span class="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+<p class="text-on-surface-variant">Confirming your payment with Paystack...</p>
+</div>
+
+<!-- State: paid, needs to upload documents -->
+<div class="hidden space-y-lg" id="state_upload">
+<div class="p-md bg-primary/10 border border-primary/30 rounded-lg">
+<p class="text-sm font-bold text-on-surface">Payment confirmed ✅</p>
+<p class="text-xs text-on-surface-variant">Now upload your ID and a selfie to complete your verification.</p>
+</div>
+<section class="section-card p-lg space-y-md">
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Government ID</label>
+<input accept="image/*" class="w-full text-sm" id="id_document_input" type="file"/>
+<p id="id_document_preview" class="text-xs text-on-surface-variant"></p>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Selfie</label>
+<input accept="image/*" class="w-full text-sm" id="selfie_input" type="file"/>
+<p id="selfie_preview" class="text-xs text-on-surface-variant"></p>
+</div>
+<button class="w-full h-12 bg-primary text-on-primary rounded-lg font-bold" id="submit_docs_btn">Submit for Review</button>
+</section>
+</div>
+
+<!-- State: pending review -->
+<div class="hidden text-center py-2xl space-y-md" id="state_pending_review">
+<span class="material-symbols-outlined text-primary text-5xl">hourglass_top</span>
+<h2 class="text-lg font-bold text-on-surface">Under review</h2>
+<p class="text-sm text-on-surface-variant">Your documents are being reviewed by our team. This usually takes 24–48 hours — we'll notify you as soon as it's done.</p>
+</div>
+
+<!-- State: approved -->
+<div class="hidden text-center py-2xl space-y-md" id="state_approved">
+<span class="material-symbols-outlined text-primary text-5xl" style="font-variation-settings: 'FILL' 1;">verified</span>
+<h2 class="text-lg font-bold text-on-surface">You're a Verified Seller!</h2>
+<p class="text-sm text-on-surface-variant">Your badge is now live on your store and listings. It's valid until <strong id="verified_until_text"></strong>.</p>
+</div>
+
+<!-- State: rejected -->
+<div class="hidden space-y-lg" id="state_rejected">
+<div class="p-md bg-error-container rounded-lg">
+<p class="text-sm font-bold text-on-error-container">Your submission wasn't approved</p>
+<p class="text-sm text-on-error-container" id="rejection_reason_text"></p>
+</div>
+<section class="section-card p-lg space-y-md">
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Government ID</label>
+<input accept="image/*" class="w-full text-sm" id="id_document_input_retry" type="file"/>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Selfie</label>
+<input accept="image/*" class="w-full text-sm" id="selfie_input_retry" type="file"/>
+</div>
+<button class="w-full h-12 bg-primary text-on-primary rounded-lg font-bold" id="resubmit_docs_btn">Resubmit for Review</button>
+</section>
+</div>
+
+<!-- State: expired -->
+<div class="hidden space-y-lg" id="state_expired">
+<div class="p-md bg-surface-container-low border border-outline-variant/30 rounded-lg">
+<p class="text-sm font-bold text-on-surface">Your verification has expired</p>
+<p class="text-sm text-on-surface-variant">It's been 365 days — re-upload your documents to renew your badge. No new payment needed.</p>
+</div>
+<section class="section-card p-lg space-y-md">
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Government ID</label>
+<input accept="image/*" class="w-full text-sm" id="id_document_input_renew" type="file"/>
+</div>
+<div class="space-y-xs">
+<label class="block font-label-md text-label-md text-on-surface-variant">Selfie</label>
+<input accept="image/*" class="w-full text-sm" id="selfie_input_renew" type="file"/>
+</div>
+<button class="w-full h-12 bg-primary text-on-primary rounded-lg font-bold" id="renew_docs_btn">Renew Verification</button>
+</section>
+</div>
+
+</main>
+
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-50" id="toast">
+<span class="material-symbols-outlined text-[#7ffc97]">check_circle</span><span class="font-label-md text-label-md" id="toast_text"></span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const PAYSTACK_PUBLIC_KEY = "pk_live_383a0e2b83c984d24a655080a848924537c4f3bc";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let store = null;
+    let verification = null;
+
+    function showError(msg) {
+        document.getElementById('form_error_text').textContent = msg;
+        document.getElementById('form_error').classList.remove('hidden');
+    }
+    function showToast(msg) {
+        document.getElementById('toast_text').textContent = msg;
+        const t = document.getElementById('toast');
+        t.classList.add('active');
+        setTimeout(() => t.classList.remove('active'), 3000);
+    }
+    function showState(id) {
+        ['state_not_started', 'state_confirming', 'state_upload', 'state_pending_review', 'state_approved', 'state_rejected', 'state_expired'].forEach(s => {
+            document.getElementById(s).classList.toggle('hidden', s !== id);
+        });
+        document.getElementById('loading_state').classList.add('hidden');
+    }
+
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href); return; }
+        currentUser = user;
+
+        const { data: storeData, error: storeErr } = await supabaseClient.from('stores').select('*').eq('seller_id', user.id).maybeSingle();
+        if (storeErr || !storeData) { showError('Set up your store first in Store Settings.'); document.getElementById('loading_state').classList.add('hidden'); return; }
+        store = storeData;
+
+        await refreshState();
+    }
+
+    async function refreshState() {
+        const { data, error } = await supabaseClient
+            .from('seller_verifications')
+            .select('*')
+            .eq('seller_id', currentUser.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) { showError(error.message); return; }
+        verification = data;
+
+        if (!verification) { showState('state_not_started'); return; }
+
+        if (verification.payment_status !== 'paid') {
+            showState('state_confirming');
+            setTimeout(refreshState, 3000); // keep polling until the webhook lands
+            return;
+        }
+
+        switch (verification.review_status) {
+            case 'not_submitted':
+                showState('state_upload');
+                break;
+            case 'pending_review':
+                showState('state_pending_review');
+                break;
+            case 'approved':
+                document.getElementById('verified_until_text').textContent =
+                    new Date(verification.expires_at).toLocaleDateString('en-NG', { year: 'numeric', month: 'long', day: 'numeric' });
+                showState('state_approved');
+                break;
+            case 'rejected':
+                document.getElementById('rejection_reason_text').textContent = verification.rejection_reason || 'No reason provided.';
+                showState('state_rejected');
+                break;
+            case 'expired':
+                showState('state_expired');
+                break;
+        }
+    }
+
+    document.getElementById('pay_verify_btn').addEventListener('click', () => {
+        const handler = PaystackPop.setup({
+            key: PAYSTACK_PUBLIC_KEY,
+            email: currentUser.email,
+            amount: 3000 * 100,
+            currency: 'NGN',
+            ref: 'MEGAMART-VERIFY-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
+            metadata: { purpose: 'seller_verification', seller_id: currentUser.id, store_id: store.id },
+            callback: function () {
+                showState('state_confirming');
+                setTimeout(refreshState, 3000);
+            },
+            onClose: function () {}
+        });
+        handler.openIframe();
+    });
+
+    async function uploadDoc(file, label) {
+        const ext = file.name.split('.').pop();
+        const path = `${currentUser.id}/${label}-${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabaseClient.storage.from('verification-documents').upload(path, file);
+        if (error) throw new Error(`Could not upload your ${label}: ` + error.message);
+        return path;
+    }
+
+    async function handleSubmit(idInputId, selfieInputId, btnId) {
+        const idFile = document.getElementById(idInputId).files[0];
+        const selfieFile = document.getElementById(selfieInputId).files[0];
+
+        if (!idFile || !selfieFile) { showError('Please choose both your ID and a selfie.'); return; }
+        for (const f of [idFile, selfieFile]) {
+            if (!f.type.startsWith('image/')) { showError('Both files must be images.'); return; }
+            if (f.size > 8 * 1024 * 1024) { showError('Each file must be under 8MB.'); return; }
+        }
+
+        const btn = document.getElementById(btnId);
+        btn.disabled = true;
+        btn.textContent = 'Uploading...';
+
+        try {
+            const idPath = await uploadDoc(idFile, 'id');
+            const selfiePath = await uploadDoc(selfieFile, 'selfie');
+
+            const { error } = await supabaseClient.rpc('submit_seller_verification_documents', {
+                p_verification_id: verification.id,
+                p_id_document_path: idPath,
+                p_selfie_path: selfiePath
+            });
+
+            if (error) throw new Error(error.message);
+
+            showToast('Submitted! We\'ll review it within 24–48 hours.');
+            await refreshState();
+        } catch (err) {
+            showError(err.message);
+            btn.disabled = false;
+            btn.textContent = 'Submit for Review';
+        }
+    }
+
+    document.getElementById('submit_docs_btn').addEventListener('click', () => handleSubmit('id_document_input', 'selfie_input', 'submit_docs_btn'));
+    document.getElementById('resubmit_docs_btn').addEventListener('click', () => handleSubmit('id_document_input_retry', 'selfie_input_retry', 'resubmit_docs_btn'));
+    document.getElementById('renew_docs_btn').addEventListener('click', () => handleSubmit('id_document_input_renew', 'selfie_input_renew', 'renew_docs_btn'));
+
+    init();
+</script>
+</body></html>
