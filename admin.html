@@ -110,6 +110,14 @@
 </div>
 </section>
 
+<!-- Pending points purchases -->
+<section class="section-card p-sm sm:p-lg space-y-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Pending Points Purchases</h2>
+<div class="space-y-sm" id="points_requests_list">
+<p class="text-on-surface-variant">Loading...</p>
+</div>
+</section>
+
 <!-- Seller identity verification requests -->
 <section class="section-card p-sm sm:p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Seller Verification Requests</h2>
@@ -295,6 +303,7 @@
         loadPending();
         loadUpgrades();
         loadVerifications();
+        loadPointsRequests();
     }
 
     document.getElementById('login_btn').addEventListener('click', async () => {
@@ -374,6 +383,50 @@
         document.getElementById('stat_approved').textContent = data.approved_products;
         document.getElementById('stat_orders').textContent = data.total_orders;
         document.getElementById('stat_pending_upgrades').textContent = data.pending_upgrades;
+    }
+
+    async function loadPointsRequests() {
+        const { data, error } = await supabaseClient
+            .from('point_purchase_requests')
+            .select('*, profiles!user_id(email)')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true });
+
+        const list = document.getElementById('points_requests_list');
+        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">No points purchases waiting for confirmation.</p>'; return; }
+
+        list.innerHTML = data.map(r => `
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
+                <div class="min-w-0">
+                    <p class="font-label-md text-on-surface truncate">${r.quantity} ${r.point_type === 'post' ? 'Post Points' : 'Job Points'}</p>
+                    <p class="text-label-sm text-on-surface-variant break-words">${r.profiles ? r.profiles.email : ''} · ₦${Number(r.amount).toLocaleString()} · ref: ${r.paystack_reference}</p>
+                </div>
+                <div class="flex gap-xs flex-shrink-0">
+                    <button class="flex-1 sm:flex-none bg-primary text-on-primary px-md py-2 sm:py-1 rounded-lg text-sm font-bold grant-points-btn" data-id="${r.id}">Grant Points</button>
+                    <button class="flex-1 sm:flex-none bg-error-container text-on-error-container px-md py-2 sm:py-1 rounded-lg text-sm font-bold reject-points-btn" data-id="${r.id}">Reject</button>
+                </div>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.grant-points-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const { error } = await supabaseClient.rpc('admin_grant_points', { p_request_id: btn.getAttribute('data-id') });
+                if (error) { showError(error.message); return; }
+                showToast('Points granted — user notified.');
+                loadPointsRequests();
+            });
+        });
+        list.querySelectorAll('.reject-points-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const reason = prompt('Reason for rejection (shown to the user, optional):');
+                if (reason === null) return;
+                const { error } = await supabaseClient.rpc('admin_reject_points', { p_request_id: btn.getAttribute('data-id'), p_reason: reason || null });
+                if (error) { showError(error.message); return; }
+                showToast('Rejected — user notified.');
+                loadPointsRequests();
+            });
+        });
     }
 
     async function loadUpgrades() {
