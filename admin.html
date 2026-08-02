@@ -141,14 +141,6 @@
 </div>
 </div>
 
-<!-- Verified sellers -->
-<section class="section-card p-sm sm:p-lg space-y-md">
-<h2 class="font-headline-md text-headline-md text-on-surface">Stores &amp; Verification</h2>
-<div class="space-y-sm" id="stores_list">
-<p class="text-on-surface-variant">Loading...</p>
-</div>
-</section>
-
 <!-- Announcement composer -->
 <section class="section-card p-sm sm:p-lg space-y-md">
 <h2 class="font-headline-md text-headline-md text-on-surface">Post an Announcement</h2>
@@ -273,7 +265,6 @@
         showToast('Approved — seller now has the Verified Seller badge.');
         closeVerificationDetail();
         loadVerifications();
-        loadStores();
     });
 
     document.getElementById('verification_reject_btn').addEventListener('click', async () => {
@@ -286,43 +277,6 @@
         closeVerificationDetail();
         loadVerifications();
     });
-
-    async function loadStores() {
-        const { data, error } = await supabaseClient
-            .from('stores')
-            .select('id, store_name, plan, is_verified')
-            .order('store_name', { ascending: true });
-
-        const list = document.getElementById('stores_list');
-        if (error) { list.innerHTML = `<p class="text-error">${error.message}</p>`; return; }
-        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant">No stores yet.</p>'; return; }
-
-        list.innerHTML = data.map(s => `
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm p-sm border border-outline-variant/30 rounded-lg">
-                <div class="min-w-0 flex items-center gap-xs">
-                    <p class="font-label-md text-on-surface truncate">${s.store_name || 'Unnamed store'}</p>
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant uppercase">${s.plan}</span>
-                    ${s.is_verified ? '<span class="material-symbols-outlined text-primary text-base" style="font-variation-settings: \'FILL\' 1;">verified</span>' : ''}
-                </div>
-                <button class="flex-shrink-0 px-md py-2 sm:py-1 rounded-lg text-sm font-bold ${s.is_verified ? 'bg-error-container text-on-error-container' : 'bg-primary text-on-primary'} verify-toggle-btn" data-id="${s.id}" data-verified="${s.is_verified}">
-                    ${s.is_verified ? 'Remove Verification' : 'Mark Verified'}
-                </button>
-            </div>
-        `).join('');
-
-        list.querySelectorAll('.verify-toggle-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const currentlyVerified = btn.getAttribute('data-verified') === 'true';
-                const { error } = await supabaseClient.rpc('admin_set_store_verified', {
-                    p_store_id: btn.getAttribute('data-id'),
-                    p_verified: !currentlyVerified
-                });
-                if (error) { showError(error.message); return; }
-                showToast(currentlyVerified ? 'Verification removed.' : 'Store marked as verified.');
-                loadStores();
-            });
-        });
-    }
 
     async function checkAdminAndEnter(user) {
         const { data: profile, error } = await supabaseClient
@@ -340,7 +294,7 @@
         loadStats();
         loadPending();
         loadUpgrades();
-        loadStores();
+        loadVerifications();
     }
 
     document.getElementById('login_btn').addEventListener('click', async () => {
