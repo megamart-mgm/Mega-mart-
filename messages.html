@@ -92,7 +92,8 @@
 </div>
 <div class="flex items-center justify-center gap-1 mb-1">
 <h3 class="font-bold text-lg text-on-surface" id="profile_view_name"></h3>
-<span class="hidden material-symbols-outlined text-primary text-[18px]" id="profile_view_verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="hidden material-symbols-outlined text-primary text-[18px]" id="profile_view_verified" style="font-variation-settings: 'FILL' 1;" title="Verified Seller">verified</span>
+<span class="hidden material-symbols-outlined text-blue-600 text-[18px]" id="profile_view_official" style="font-variation-settings: 'FILL' 1;" title="Official Mega Mart Account">verified</span>
 </div>
 <p class="text-sm text-on-surface-variant mb-md" id="profile_view_status"></p>
 <div class="text-left space-y-2 pt-md border-t border-outline-variant/20" id="profile_view_details"></div>
@@ -323,13 +324,16 @@
             : '<span class="material-symbols-outlined text-3xl text-tertiary">person</span>';
         document.getElementById('profile_view_name').textContent = cached.otherName;
         document.getElementById('profile_view_verified').classList.add('hidden');
+        document.getElementById('profile_view_official').classList.add('hidden');
         document.getElementById('profile_view_details').innerHTML = '<p class="text-sm text-on-surface-variant text-center">Loading...</p>';
 
         document.getElementById('profile_view_modal').classList.remove('hidden');
         document.getElementById('profile_view_modal').classList.add('flex');
 
         const { data: profile } = await supabaseClient
-            .from('profiles').select('last_seen_at, phone_number, location').eq('id', cached.otherId).maybeSingle();
+            .from('profiles').select('last_seen_at, phone_number, location, is_official').eq('id', cached.otherId).maybeSingle();
+
+        document.getElementById('profile_view_official').classList.toggle('hidden', !profile?.is_official);
 
         const online = profile?.last_seen_at && (Date.now() - new Date(profile.last_seen_at).getTime()) < 2 * 60 * 1000;
         document.getElementById('profile_view_status').textContent = online ? 'Online now' : 'Offline';
