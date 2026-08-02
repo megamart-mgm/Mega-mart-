@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Find Jobs | Mega Mart</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = { darkMode: "class", theme: { extend: {
+        "colors": {
+          "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+          "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+          "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a"
+        },
+        "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px", "container-max": "1000px" }
+      }}}
+    </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .job-card { cursor: pointer; transition: box-shadow 0.15s ease; }
+    .job-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    #job_detail_modal, #apply_modal { display: none; }
+    #job_detail_modal.flex, #apply_modal.flex { display: flex; }
+    #toast { display: none; } #toast.active { display: flex; }
+</style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-md h-16 shadow-sm bg-surface">
+<div class="flex items-center gap-sm">
+<a class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high" href="store.html">arrow_back</a>
+<span class="font-bold text-primary text-xl">Find Jobs</span>
+</div>
+<div class="flex items-center gap-sm">
+<span class="hidden md:flex items-center gap-1 text-xs text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-full" id="points_pill">
+<span class="material-symbols-outlined text-sm">toll</span> <span id="points_pill_text">— Job Points</span>
+</span>
+<a class="bg-primary text-on-primary px-md py-2 rounded-lg text-sm font-bold" href="post-job.html">Post a Job</a>
+</div>
+</header>
+
+<main class="mt-20 px-md max-w-container-max mx-auto space-y-lg">
+
+<div class="hidden p-md bg-red-50 border border-error/30 rounded-lg" id="page_error">
+<p class="text-sm text-error" id="page_error_text"></p>
+</div>
+
+<div class="relative">
+<input class="w-full h-12 bg-white border border-outline-variant rounded-xl px-12" id="search_input" placeholder="Search jobs by title or category..." type="text"/>
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+</div>
+
+<div id="jobs_list" class="space-y-sm">
+<p class="text-on-surface-variant">Loading jobs...</p>
+</div>
+
+</main>
+
+<!-- Job detail + apply modal -->
+<div class="fixed inset-0 bg-black/50 z-[80] items-center justify-center p-md" id="job_detail_modal">
+<div class="w-full max-w-[600px] max-h-[85vh] overflow-y-auto bg-white rounded-xl p-lg space-y-md">
+<div class="flex justify-between items-start">
+<div>
+<span class="text-xs font-bold px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant uppercase" id="detail_category"></span>
+<h2 class="text-xl font-bold text-on-surface mt-1" id="detail_title"></h2>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant" id="detail_close_btn">close</button>
+</div>
+<p class="text-2xl font-bold text-primary" id="detail_budget"></p>
+<p class="text-sm text-on-surface-variant" id="detail_posted_by"></p>
+<p class="text-sm text-on-surface whitespace-pre-wrap leading-relaxed" id="detail_description"></p>
+
+<div class="hidden p-md bg-error-container rounded-lg" id="detail_error">
+<p class="text-sm text-on-error-container" id="detail_error_text"></p>
+</div>
+
+<div id="detail_apply_section">
+<textarea class="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm mb-sm" id="cover_message_input" placeholder="Write a short cover message to the job poster (optional)..." rows="3"></textarea>
+<button class="w-full h-12 bg-primary text-on-primary rounded-lg font-bold" id="apply_btn">Apply — Uses 20 Job Points</button>
+</div>
+<p class="hidden text-center text-primary font-bold" id="already_applied_msg">✓ You've already applied to this job</p>
+</div>
+</div>
+
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#213145] text-white px-lg py-sm rounded-full shadow-xl items-center gap-sm z-50" id="toast">
+<span class="material-symbols-outlined text-[#7ffc97]">check_circle</span>
+<span class="text-sm" id="toast_text"></span>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let allJobs = [];
+    let myApplicationJobIds = new Set();
+    let activeJob = null;
+
+    function showToast(msg) {
+        document.getElementById('toast_text').textContent = msg;
+        const t = document.getElementById('toast');
+        t.classList.add('active');
+        setTimeout(() => t.classList.remove('active'), 3000);
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    function formatBudget(job) {
+        if (!job.budget_amount) return job.budget_type === 'hourly' ? 'Hourly — rate to be discussed' : 'Budget to be discussed';
+        return '₦' + Number(job.budget_amount).toLocaleString() + (job.budget_type === 'hourly' ? '/hr' : ' fixed');
+    }
+
+    function timeAgo(dateStr) {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const days = Math.floor(diff / 86400000);
+        if (days < 1) return 'today';
+        if (days === 1) return '1 day ago';
+        return days + ' days ago';
+    }
+
+    async function loadJobs() {
+        const { data, error } = await supabaseClient
+            .from('jobs')
+            .select('*, poster:profiles!poster_id(full_name)')
+            .eq('status', 'open')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            document.getElementById('jobs_list').innerHTML = `<p class="text-error">${error.message}</p>`;
+            return;
+        }
+
+        allJobs = data || [];
+        renderJobs(allJobs);
+    }
+
+    function renderJobs(jobs) {
+        const list = document.getElementById('jobs_list');
+        if (jobs.length === 0) {
+            list.innerHTML = '<p class="text-on-surface-variant text-center py-2xl">No open jobs right now — check back soon, or post one yourself.</p>';
+            return;
+        }
+
+        list.innerHTML = jobs.map(j => `
+            <div class="job-card bg-white border border-outline-variant/20 rounded-xl p-lg" data-job-id="${j.id}">
+                <div class="flex justify-between items-start gap-md">
+                    <div class="min-w-0">
+                        ${j.category ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant uppercase">${escapeHtml(j.category)}</span>` : ''}
+                        <h3 class="font-bold text-on-surface mt-1">${escapeHtml(j.title)}</h3>
+                        <p class="text-sm text-on-surface-variant line-clamp-2 mt-1">${escapeHtml(j.description)}</p>
+                        <p class="text-xs text-on-surface-variant mt-2">Posted by ${escapeHtml(j.poster?.full_name || 'a Mega Mart user')} · ${timeAgo(j.created_at)}</p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="font-bold text-primary">${formatBudget(j)}</p>
+                        ${myApplicationJobIds.has(j.id) ? '<span class="text-xs text-primary font-bold">✓ Applied</span>' : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.job-card').forEach(card => {
+            card.addEventListener('click', () => openJobDetail(card.getAttribute('data-job-id')));
+        });
+    }
+
+    document.getElementById('search_input').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        const filtered = allJobs.filter(j =>
+            j.title.toLowerCase().includes(q) || (j.category || '').toLowerCase().includes(q)
+        );
+        renderJobs(filtered);
+    });
+
+    async function loadMyApplications() {
+        if (!currentUser) return;
+        const { data } = await supabaseClient.from('job_applications').select('job_id').eq('applicant_id', currentUser.id);
+        myApplicationJobIds = new Set((data || []).map(a => a.job_id));
+    }
+
+    function openJobDetail(jobId) {
+        activeJob = allJobs.find(j => j.id === jobId);
+        if (!activeJob) return;
+
+        document.getElementById('detail_category').textContent = activeJob.category || 'General';
+        document.getElementById('detail_title').textContent = activeJob.title;
+        document.getElementById('detail_budget').textContent = formatBudget(activeJob);
+        document.getElementById('detail_posted_by').textContent = `Posted by ${activeJob.poster?.full_name || 'a Mega Mart user'} · ${timeAgo(activeJob.created_at)}`;
+        document.getElementById('detail_description').textContent = activeJob.description;
+        document.getElementById('detail_error').classList.add('hidden');
+        document.getElementById('cover_message_input').value = '';
+
+        const alreadyApplied = myApplicationJobIds.has(activeJob.id);
+        document.getElementById('detail_apply_section').classList.toggle('hidden', alreadyApplied);
+        document.getElementById('already_applied_msg').classList.toggle('hidden', !alreadyApplied);
+
+        document.getElementById('job_detail_modal').classList.add('flex');
+    }
+
+    document.getElementById('detail_close_btn').addEventListener('click', () => {
+        document.getElementById('job_detail_modal').classList.remove('flex');
+    });
+    document.getElementById('job_detail_modal').addEventListener('click', (e) => {
+        if (e.target.id === 'job_detail_modal') document.getElementById('job_detail_modal').classList.remove('flex');
+    });
+
+    document.getElementById('apply_btn').addEventListener('click', async () => {
+        if (!currentUser) {
+            window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
+            return;
+        }
+        if (!activeJob) return;
+
+        const btn = document.getElementById('apply_btn');
+        btn.disabled = true;
+        btn.textContent = 'Applying...';
+
+        const message = document.getElementById('cover_message_input').value.trim();
+        const { error } = await supabaseClient.rpc('apply_to_job', { p_job_id: activeJob.id, p_cover_message: message || null });
+
+        btn.disabled = false;
+        btn.textContent = 'Apply — Uses 20 Job Points';
+
+        if (error) {
+            const errEl = document.getElementById('detail_error');
+            if (error.message.includes('INSUFFICIENT_POINTS')) {
+                document.getElementById('detail_error_text').innerHTML = `You don't have enough Job Points to apply. <a href="buy-points.html?type=apply" class="underline font-bold">Buy more points</a>`;
+            } else {
+                document.getElementById('detail_error_text').textContent = error.message;
+            }
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        myApplicationJobIds.add(activeJob.id);
+        document.getElementById('job_detail_modal').classList.remove('flex');
+        showToast('Application submitted!');
+        renderJobs(allJobs);
+        loadPointsPill();
+    });
+
+    async function loadPointsPill() {
+        if (!currentUser) return;
+        const { data: profile } = await supabaseClient.from('profiles').select('job_points_balance').eq('id', currentUser.id).maybeSingle();
+        document.getElementById('points_pill_text').textContent = (profile?.job_points_balance ?? 0) + ' Job Points';
+    }
+
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        currentUser = user;
+
+        await loadJobs();
+        if (currentUser) {
+            await loadMyApplications();
+            renderJobs(allJobs);
+            loadPointsPill();
+            document.getElementById('points_pill').classList.remove('hidden');
+            document.getElementById('points_pill').classList.add('flex');
+        }
+    }
+
+    init();
+</script>
+</body></html>
