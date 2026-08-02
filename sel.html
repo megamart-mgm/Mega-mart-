@@ -111,6 +111,10 @@ notifications
 <span class="material-symbols-outlined">group</span> Customers
                 </a>
 <div class="pt-md pb-xs px-sm text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Settings</div>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant justify-between" href="verify-seller.html">
+<span class="flex items-center gap-sm"><span class="material-symbols-outlined">verified</span> Get Verified</span>
+<span class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full" id="verify_status_badge"></span>
+</a>
 <a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="store-settings.html">
 <span class="material-symbols-outlined">store</span> Store Settings
                 </a>
@@ -449,6 +453,26 @@ notifications
             .subscribe();
     }
 
+    async function loadVerifyStatusBadge(userId) {
+        const { data } = await supabaseClient
+            .from('seller_verifications').select('review_status').eq('seller_id', userId).order('created_at', { ascending: false }).limit(1);
+
+        const badge = document.getElementById('verify_status_badge');
+        if (!data || data.length === 0) { badge.classList.add('hidden'); return; }
+
+        const status = data[0].review_status;
+        const labels = {
+            pending_review: ['Pending', 'bg-surface-container text-on-surface-variant'],
+            approved: ['Verified', 'bg-primary/10 text-primary'],
+            rejected: ['Rejected', 'bg-error-container text-on-error-container'],
+            expired: ['Expired', 'bg-error-container text-on-error-container']
+        };
+        if (!labels[status]) { badge.classList.add('hidden'); return; }
+
+        badge.textContent = labels[status][0];
+        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full ' + labels[status][1];
+    }
+
     async function loadDashboard() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
@@ -459,6 +483,7 @@ notifications
         loadNotifications(user.id);
         loadBellNotifications(user.id);
         subscribeBellRealtime(user.id);
+        loadVerifyStatusBadge(user.id);
 
         // Avatar initials
         const name = (user.user_metadata && user.user_metadata.full_name) || user.email || 'S';
