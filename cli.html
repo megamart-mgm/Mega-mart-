@@ -61,6 +61,9 @@ notifications
 <a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="messages.html">
 <span class="material-symbols-outlined">chat</span> Messages
 </a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="jobs.html">
+<span class="material-symbols-outlined">work</span> Find Job
+</a>
 <a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="store.html">
 <span class="material-symbols-outlined">storefront</span> Continue Shopping
 </a>
@@ -99,6 +102,21 @@ notifications
 <div class="space-y-sm" id="orders_list">
 <p class="text-on-surface-variant text-sm">No orders yet — once you agree on a purchase in chat with a seller, it'll show up here.</p>
 </div>
+</section>
+
+<!-- Job board -->
+<section class="section-card p-lg space-y-md">
+<div class="flex justify-between items-center">
+<h2 class="font-bold text-lg text-on-surface">Job Board</h2>
+<div class="flex items-center gap-sm">
+<span class="text-xs font-bold px-2 py-1 rounded-full bg-primary/10 text-primary" id="job_points_pill">0 Job Points</span>
+<a class="text-primary text-sm font-bold hover:underline" href="buy-points.html">Buy Points</a>
+</div>
+</div>
+<div class="space-y-sm" id="job_applications_list">
+<p class="text-on-surface-variant text-sm">Loading...</p>
+</div>
+<a class="block text-center text-primary text-sm font-bold hover:underline pt-xs" href="jobs.html">Browse open jobs →</a>
 </section>
 
 <!-- Recent chats -->
@@ -167,6 +185,40 @@ notifications
         if (profile?.avatar_url) {
             document.getElementById('profile_avatar').innerHTML = `<img src="${profile.avatar_url}" class="w-full h-full object-cover" />`;
         }
+    }
+
+    async function loadJobApplications(userId) {
+        const { data: profile } = await supabaseClient
+            .from('profiles').select('job_points_balance').eq('id', userId).maybeSingle();
+        document.getElementById('job_points_pill').textContent = (profile?.job_points_balance ?? 0) + ' Job Points';
+
+        const { data, error } = await supabaseClient
+            .from('job_applications')
+            .select('*, jobs(title, status, budget_type, budget_amount)')
+            .eq('applicant_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const list = document.getElementById('job_applications_list');
+        if (error) { list.innerHTML = `<p class="text-error text-sm">${error.message}</p>`; return; }
+        if (!data || data.length === 0) { list.innerHTML = '<p class="text-on-surface-variant text-sm">You haven\'t applied to any jobs yet.</p>'; return; }
+
+        const statusStyles = {
+            submitted: 'bg-surface-container text-on-surface-variant',
+            viewed: 'bg-blue-100 text-blue-700',
+            accepted: 'bg-green-100 text-green-700',
+            rejected: 'bg-error-container text-on-error-container'
+        };
+
+        list.innerHTML = data.map(a => `
+            <div class="flex items-center justify-between gap-sm p-sm hover:bg-surface-container-low rounded-lg">
+                <div class="min-w-0">
+                    <p class="font-label-md text-on-surface truncate">${(a.jobs?.title || 'Job removed').replace(/</g, '&lt;')}</p>
+                    <p class="text-xs text-on-surface-variant">${a.jobs?.budget_type === 'hourly' ? '₦' + Number(a.jobs.budget_amount || 0).toLocaleString() + '/hr' : '₦' + Number(a.jobs?.budget_amount || 0).toLocaleString()}</p>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex-shrink-0 ${statusStyles[a.status] || statusStyles.submitted}">${a.status}</span>
+            </div>
+        `).join('');
     }
 
     async function loadRecentChats(userId) {
@@ -293,6 +345,7 @@ notifications
 
         await loadProfile(user);
         await loadRecentChats(user.id);
+        await loadJobApplications(user.id);
         await loadBellNotifications();
         heartbeat();
 
