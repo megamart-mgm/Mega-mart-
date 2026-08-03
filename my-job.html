@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>My Posted Jobs | Mega Mart</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="tailwind-config">
+      tailwind.config = { darkMode: "class", theme: { extend: {
+        "colors": {
+          "on-surface-variant": "#3e4a3d", "surface-container": "#e5eeff", "on-surface": "#0b1c30",
+          "surface-container-low": "#eff4ff", "primary": "#006b2c", "on-primary": "#ffffff",
+          "surface": "#f8f9ff", "surface-container-lowest": "#ffffff", "outline-variant": "#bdcaba",
+          "background": "#f8f9ff", "on-background": "#0b1c30", "error": "#ba1a1a"
+        },
+        "borderRadius": { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        "spacing": { "xl": "32px", "md": "16px", "xs": "4px", "lg": "24px", "sm": "8px" }
+      }}}
+    </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .section-card { background: #fff; border: 1px solid #e5eeff; border-radius: 12px; }
+</style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+
+<header class="fixed top-0 left-0 w-full z-50 flex items-center gap-sm px-md h-16 shadow-sm bg-surface">
+<a class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high" href="jobs.html">arrow_back</a>
+<span class="font-bold text-primary text-xl">My Posted Jobs</span>
+</header>
+
+<main class="mt-20 px-md max-w-[800px] mx-auto space-y-lg">
+
+<div class="hidden p-md bg-error-container rounded-lg" id="error_banner">
+<p class="text-sm text-on-error-container" id="error_text"></p>
+</div>
+
+<div class="flex justify-end">
+<a class="bg-primary text-on-primary px-lg py-2 rounded-lg text-sm font-bold" href="post-job.html">+ Post a New Job</a>
+</div>
+
+<div class="space-y-lg" id="jobs_list">
+<p class="text-on-surface-variant text-center py-2xl">Loading your posted jobs...</p>
+</div>
+
+</main>
+
+<script>
+    const SUPABASE_URL = "https://wexvdmimqqiwarvswwbi.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+
+    function showError(msg) {
+        document.getElementById('error_text').textContent = msg;
+        document.getElementById('error_banner').classList.remove('hidden');
+    }
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+    function timeAgo(dateStr) {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const days = Math.floor(diff / 86400000);
+        if (days < 1) return 'today';
+        if (days === 1) return '1 day ago';
+        return days + ' days ago';
+    }
+
+    const statusStyles = {
+        submitted: 'bg-surface-container text-on-surface-variant',
+        viewed: 'bg-blue-100 text-blue-700',
+        accepted: 'bg-green-100 text-green-700',
+        rejected: 'bg-error-container text-on-error-container'
+    };
+
+    async function init() {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) { window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href); return; }
+        currentUser = user;
+        await loadJobs();
+    }
+
+    async function loadJobs() {
+        const { data: jobs, error } = await supabaseClient
+            .from('jobs')
+            .select('*')
+            .eq('poster_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+        const list = document.getElementById('jobs_list');
+        if (error) { showError(error.message); return; }
+        if (!jobs || jobs.length === 0) {
+            list.innerHTML = '<p class="text-on-surface-variant text-center py-2xl">You haven\'t posted any jobs yet.</p>';
+            return;
+        }
+
+        list.innerHTML = jobs.map(j => `
+            <div class="section-card p-lg space-y-md">
+                <div class="flex items-start justify-between gap-sm">
+                    <div class="min-w-0">
+                        <h2 class="font-bold text-lg text-on-surface">${escapeHtml(j.title)}</h2>
+                        <p class="text-xs text-on-surface-variant">${j.category ? escapeHtml(j.category) + ' · ' : ''}${j.budget_type === 'hourly' ? '₦' + Number(j.budget_amount || 0).toLocaleString() + '/hr' : '₦' + Number(j.budget_amount || 0).toLocaleString()} · Posted ${timeAgo(j.created_at)}</p>
+                    </div>
+                    <span class="text-[10px] font-bold px-2 py-1 rounded-full uppercase flex-shrink-0 ${j.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-surface-container text-on-surface-variant'}">${j.status}</span>
+                </div>
+                <div class="space-y-sm" id="applicants-${j.id}">
+                    <p class="text-sm text-on-surface-variant">Loading applicants...</p>
+                </div>
+            </div>
+        `).join('');
+
+        jobs.forEach(j => loadApplicants(j.id));
+    }
+
+    async function loadApplicants(jobId) {
+        const { data: applications, error } = await supabaseClient
+            .from('job_applications')
+            .select('*, profiles!applicant_id(full_name, avatar_url)')
+            .eq('job_id', jobId)
+            .order('created_at', { ascending: false });
+
+        const wrap = document.getElementById('applicants-' + jobId);
+        if (error) { wrap.innerHTML = `<p class="text-error text-sm">${error.message}</p>`; return; }
+        if (!applications || applications.length === 0) {
+            wrap.innerHTML = '<p class="text-sm text-on-surface-variant border-t border-outline-variant/20 pt-sm">No applicants yet.</p>';
+            return;
+        }
+
+        wrap.innerHTML = '<div class="border-t border-outline-variant/20 pt-sm space-y-sm">' + applications.map(a => `
+            <div class="flex items-start gap-sm p-sm bg-surface-container-low rounded-lg">
+                <div class="w-9 h-9 rounded-full bg-surface-container-high overflow-hidden flex items-center justify-center flex-shrink-0">
+                    ${a.profiles?.avatar_url ? `<img src="${a.profiles.avatar_url}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-tertiary text-lg">person</span>'}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-sm">
+                        <p class="font-bold text-sm text-on-surface truncate">${escapeHtml(a.profiles?.full_name || 'Applicant')}</p>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex-shrink-0 ${statusStyles[a.status] || statusStyles.submitted}">${a.status}</span>
+                    </div>
+                    ${a.cover_message ? `<p class="text-sm text-on-surface-variant mt-1">${escapeHtml(a.cover_message)}</p>` : '<p class="text-sm text-on-surface-variant italic mt-1">No cover message</p>'}
+                    <button class="mt-sm bg-primary text-on-primary px-md py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 message-btn" data-applicant="${a.applicant_id}">
+                        <span class="material-symbols-outlined text-sm">chat</span> Message
+                    </button>
+                </div>
+            </div>
+        `).join('') + '</div>';
+
+        wrap.querySelectorAll('.message-btn').forEach(btn => {
+            btn.addEventListener('click', () => messageApplicant(jobId, btn.getAttribute('data-applicant')));
+        });
+    }
+
+    async function messageApplicant(jobId, applicantId) {
+        const { data: conversationId, error } = await supabaseClient.rpc('get_or_create_job_conversation', {
+            p_job_id: jobId,
+            p_other_user_id: applicantId
+        });
+        if (error) { alert('Could not start a conversation: ' + error.message); return; }
+        window.location.href = 'messages.html?conversation=' + conversationId;
+    }
+
+    init();
+</script>
+</body></html>
