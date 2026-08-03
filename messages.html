@@ -202,7 +202,7 @@
     async function loadConversations() {
         const { data, error } = await supabaseClient
             .from('conversations')
-            .select('*, buyer:profiles!buyer_id(full_name, avatar_url), seller:profiles!seller_id(full_name, avatar_url), products(name, image_urls)')
+            .select('*, buyer:profiles!buyer_id(full_name, avatar_url), seller:profiles!seller_id(full_name, avatar_url), products(name, image_urls), jobs(title)')
             .or(`buyer_id.eq.${currentUser.id},seller_id.eq.${currentUser.id}`)
             .order('last_message_at', { ascending: false, nullsFirst: false });
 
@@ -219,16 +219,20 @@
             const otherAvatar = isBuyer ? c.seller?.avatar_url : c.buyer?.avatar_url;
             const otherId = isBuyer ? c.seller_id : c.buyer_id;
             const productName = c.products?.name || '';
+            const jobTitle = c.jobs?.title || '';
+            const hasProduct = !!c.product_id;
             const thumb = c.products?.image_urls?.[0];
             const unread = unreadCounts[c.id] || 0;
             totalUnread += unread;
 
-            conversationCache[c.id] = { otherName, productName, otherAvatar, otherId, isBuyer, completedAt: c.completed_at };
+            conversationCache[c.id] = { otherName, productName, jobTitle, hasProduct, otherAvatar, otherId, isBuyer, completedAt: c.completed_at };
+
+            const subtitlePreview = c.last_message || (jobTitle ? 'Re: ' + jobTitle : (productName ? 'Say hello about ' + productName : 'Say hello'));
 
             return `
                 <button class="conv-item w-full text-left p-sm sm:p-md flex items-center gap-sm hover:bg-surface-container-low transition-colors" data-id="${c.id}">
                     <div class="w-11 h-11 rounded-full bg-surface-container-high overflow-hidden flex-shrink-0 flex items-center justify-center">
-                        ${otherAvatar ? `<img src="${otherAvatar}" class="w-full h-full object-cover" />` : (thumb ? `<img src="${thumb}" class="w-full h-full object-cover" />` : '<span class="material-symbols-outlined text-tertiary">person</span>')}
+                        ${otherAvatar ? `<img src="${otherAvatar}" class="w-full h-full object-cover" />` : (thumb ? `<img src="${thumb}" class="w-full h-full object-cover" />` : `<span class="material-symbols-outlined text-tertiary">${jobTitle ? 'work' : 'person'}</span>`)}
                     </div>
                     <div class="min-w-0 flex-1">
                         <div class="flex justify-between items-baseline gap-sm">
@@ -236,7 +240,7 @@
                             <span class="text-xs text-on-surface-variant flex-shrink-0">${timeAgo(c.last_message_at)}</span>
                         </div>
                         <div class="flex justify-between items-center gap-sm">
-                            <p class="text-sm text-on-surface-variant truncate">${escapeHtml(c.last_message || 'Say hello about ' + productName)}</p>
+                            <p class="text-sm text-on-surface-variant truncate">${escapeHtml(subtitlePreview)}</p>
                             ${unread > 0 ? `<span class="unread-dot flex-shrink-0">${unread}</span>` : ''}
                         </div>
                     </div>
@@ -266,7 +270,7 @@
             document.getElementById('thread_avatar').innerHTML = cached.otherAvatar
                 ? `<img src="${cached.otherAvatar}" class="w-full h-full object-cover" />`
                 : '<span class="material-symbols-outlined text-tertiary">person</span>';
-            document.getElementById('thread_product').textContent = cached.productName ? 'About: ' + cached.productName : '';
+            document.getElementById('thread_product').textContent = cached.jobTitle ? 'Re: ' + cached.jobTitle : (cached.productName ? 'About: ' + cached.productName : '');
         }
 
         document.getElementById('composer').classList.remove('hidden');
@@ -283,10 +287,10 @@
     // and the reviews insert policy (see Part 16 SQL).
     // ---------------------------------------------------------------
     function showCompletionState(completed) {
-        document.getElementById('thread_completed_check').classList.toggle('hidden', !completed);
         const cached = conversationCache[activeConversation];
+        document.getElementById('thread_completed_check').classList.toggle('hidden', !completed || !(cached && cached.hasProduct));
         const bar = document.getElementById('completion_bar');
-        if (cached && cached.isBuyer && !completed) {
+        if (cached && cached.hasProduct && cached.isBuyer && !completed) {
             bar.classList.remove('hidden');
             bar.classList.add('flex');
         } else {
@@ -340,8 +344,8 @@
 
         let detailsHtml = '';
 
-        if (cached.isBuyer) {
-            // Other participant is the SELLER — show their public store info
+        if (cached.hasProduct && cached.isBuyer) {
+            // Real product conversation, other participant is the SELLER — show their public store info
             const { data: store } = await supabaseClient
                 .from('stores').select('store_name, whatsapp_number, is_verified').eq('seller_id', cached.otherId).maybeSingle();
 
@@ -349,7 +353,8 @@
             if (store?.store_name) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">Store</span><span class="font-bold text-on-surface">${escapeHtml(store.store_name)}</span></p>`;
             if (store?.whatsapp_number) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">WhatsApp</span><span class="font-bold text-on-surface">${escapeHtml(store.whatsapp_number)}</span></p>`;
         } else {
-            // Other participant is the BUYER — only what they've chosen to share
+            // Job conversation (either side), or the other participant is a
+            // buyer — only show what they've chosen to share themselves
             if (profile?.phone_number) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">Phone</span><span class="font-bold text-on-surface">${escapeHtml(profile.phone_number)}</span></p>`;
             if (profile?.location) detailsHtml += `<p class="text-sm flex justify-between"><span class="text-on-surface-variant">Location</span><span class="font-bold text-on-surface">${escapeHtml(profile.location)}</span></p>`;
         }
