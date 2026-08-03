@@ -3,6 +3,14 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Find Jobs | Mega Mart</title>
+<meta content="Find Jobs | Mega Mart" property="og:title"/>
+<meta content="Discover trusted listings on Mega Mart, Nigeria's marketplace." property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="https://wexvdmimqqiwarvswwbi.supabase.co/storage/v1/object/public/avatars/IMG_0610.png" property="og:image"/>
+<meta content="1200" property="og:image:width"/>
+<meta content="630" property="og:image:height"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="https://wexvdmimqqiwarvswwbi.supabase.co/storage/v1/object/public/avatars/IMG_0610.png" name="twitter:image"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -72,6 +80,24 @@
 </div>
 <p class="text-2xl font-bold text-primary" id="detail_budget"></p>
 <p class="text-sm text-on-surface-variant" id="detail_posted_by"></p>
+
+<!-- Share row -->
+<div class="flex items-center gap-sm flex-wrap">
+<span class="text-xs font-bold text-on-surface-variant">Share:</span>
+<button class="w-9 h-9 rounded-full bg-[#1877F2] text-white flex items-center justify-center hover:opacity-90" id="share_facebook_btn" title="Share on Facebook">
+<span class="material-symbols-outlined text-lg">thumb_up</span>
+</button>
+<button class="w-9 h-9 rounded-full bg-[#25D366] text-white flex items-center justify-center hover:opacity-90" id="share_whatsapp_btn" title="Share on WhatsApp">
+<span class="material-symbols-outlined text-lg">chat</span>
+</button>
+<button class="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center hover:opacity-90" id="share_x_btn" title="Share on X">
+<span class="material-symbols-outlined text-lg">tag</span>
+</button>
+<button class="w-9 h-9 rounded-full bg-surface-container-low text-on-surface-variant flex items-center justify-center hover:bg-surface-container" id="share_copy_btn" title="Copy link">
+<span class="material-symbols-outlined text-lg">link</span>
+</button>
+</div>
+
 <p class="text-sm text-on-surface whitespace-pre-wrap leading-relaxed" id="detail_description"></p>
 
 <div class="hidden p-md bg-error-container rounded-lg" id="detail_error">
@@ -82,7 +108,10 @@
 <textarea class="w-full px-3 py-2 bg-surface-container-low border border-outline-variant rounded-lg text-sm mb-sm" id="cover_message_input" placeholder="Write a short cover message to the job poster (optional)..." rows="3"></textarea>
 <button class="w-full h-12 bg-primary text-on-primary rounded-lg font-bold" id="apply_btn">Apply — Uses 20 Job Points</button>
 </div>
-<p class="hidden text-center text-primary font-bold" id="already_applied_msg">✓ You've already applied to this job</p>
+<p class="hidden text-center text-primary font-bold mb-sm" id="already_applied_msg">✓ You've already applied to this job</p>
+<button class="hidden w-full h-12 bg-primary text-on-primary rounded-lg font-bold flex items-center justify-center gap-2" id="message_poster_btn">
+<span class="material-symbols-outlined">chat</span> Message the Poster
+</button>
 </div>
 </div>
 
@@ -204,13 +233,43 @@
         document.getElementById('already_applied_msg').classList.toggle('hidden', !alreadyApplied);
 
         document.getElementById('job_detail_modal').classList.add('flex');
+
+        // Update the URL so this exact job can be shared/deep-linked
+        const shareUrl = `${window.location.origin}${window.location.pathname}?job=${activeJob.id}`;
+        window.history.replaceState({}, '', shareUrl);
+        wireShareButtons(activeJob, shareUrl);
+    }
+
+    function wireShareButtons(job, shareUrl) {
+        const shareText = `${job.title} — ${formatBudget(job)} on Mega Mart`;
+
+        document.getElementById('share_facebook_btn').onclick = () => {
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank', 'width=600,height=500');
+        };
+        document.getElementById('share_whatsapp_btn').onclick = () => {
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`, '_blank');
+        };
+        document.getElementById('share_x_btn').onclick = () => {
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+        };
+        document.getElementById('share_copy_btn').onclick = async () => {
+            await navigator.clipboard.writeText(shareUrl);
+            const btn = document.getElementById('share_copy_btn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined text-lg">check</span>';
+            setTimeout(() => { btn.innerHTML = original; }, 1500);
+        };
     }
 
     document.getElementById('detail_close_btn').addEventListener('click', () => {
         document.getElementById('job_detail_modal').classList.remove('flex');
+        window.history.replaceState({}, '', window.location.pathname);
     });
     document.getElementById('job_detail_modal').addEventListener('click', (e) => {
-        if (e.target.id === 'job_detail_modal') document.getElementById('job_detail_modal').classList.remove('flex');
+        if (e.target.id === 'job_detail_modal') {
+            document.getElementById('job_detail_modal').classList.remove('flex');
+            window.history.replaceState({}, '', window.location.pathname);
+        }
     });
 
     document.getElementById('apply_btn').addEventListener('click', async () => {
@@ -266,6 +325,10 @@
             document.getElementById('points_pill').classList.remove('hidden');
             document.getElementById('points_pill').classList.add('flex');
         }
+
+        // Deep link — someone opened a shared job link
+        const sharedJobId = new URLSearchParams(window.location.search).get('job');
+        if (sharedJobId) openJobDetail(sharedJobId);
     }
 
     init();
