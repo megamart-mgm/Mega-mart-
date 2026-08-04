@@ -91,6 +91,7 @@
 
     let currentUser = null;
     let currentBalance = 0;
+    let isOfficialAccount = false;
 
     function showError(msg) {
         document.getElementById('form_error_text').textContent = msg;
@@ -99,12 +100,13 @@
     }
 
     async function loadBalance() {
-        const { data: profile } = await supabaseClient.from('profiles').select('post_points_balance').eq('id', currentUser.id).maybeSingle();
+        const { data: profile } = await supabaseClient.from('profiles').select('post_points_balance, is_official').eq('id', currentUser.id).maybeSingle();
         currentBalance = profile?.post_points_balance ?? 0;
-        document.getElementById('balance_display').textContent = currentBalance + ' points';
+        isOfficialAccount = profile?.is_official ?? false;
+        document.getElementById('balance_display').textContent = isOfficialAccount ? 'Unlimited' : currentBalance + ' points';
 
         const btn = document.getElementById('submit_btn');
-        if (currentBalance < 50) {
+        if (!isOfficialAccount && currentBalance < 50) {
             btn.disabled = true;
             showError(`You need 50 Post Points to post a job — you currently have ${currentBalance}. Buy more points above to continue.`);
         }
