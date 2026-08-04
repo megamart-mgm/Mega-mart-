@@ -214,7 +214,7 @@ notifications
             <div class="flex items-center justify-between gap-sm p-sm hover:bg-surface-container-low rounded-lg">
                 <div class="min-w-0">
                     <p class="font-label-md text-on-surface truncate">${(a.jobs?.title || 'Job removed').replace(/</g, '&lt;')}</p>
-                    <p class="text-xs text-on-surface-variant">${a.jobs?.budget_type === 'hourly' ? '₦' + Number(a.jobs.budget_amount || 0).toLocaleString() + '/hr' : '₦' + Number(a.jobs?.budget_amount || 0).toLocaleString()}</p>
+                    <p class="text-xs text-on-surface-variant">${a.jobs?.budget_type === 'hourly' ? '₦' + Number(a.jobs.budget_amount || 0).toLocaleString() + '/hr' : '₦' + Number(a.jobs?.budget_amount || 0).toLocaleString()}${a.jobs?.status === 'closed' ? ' · Job taken' : ''}</p>
                 </div>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase flex-shrink-0 ${statusStyles[a.status] || statusStyles.submitted}">${a.status}</span>
             </div>
