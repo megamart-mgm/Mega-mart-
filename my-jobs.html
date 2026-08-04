@@ -107,13 +107,32 @@
                         <h2 class="font-bold text-lg text-on-surface">${escapeHtml(j.title)}</h2>
                         <p class="text-xs text-on-surface-variant">${j.category ? escapeHtml(j.category) + ' · ' : ''}${j.budget_type === 'hourly' ? '₦' + Number(j.budget_amount || 0).toLocaleString() + '/hr' : '₦' + Number(j.budget_amount || 0).toLocaleString()} · Posted ${timeAgo(j.created_at)}</p>
                     </div>
-                    <span class="text-[10px] font-bold px-2 py-1 rounded-full uppercase flex-shrink-0 ${j.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-surface-container text-on-surface-variant'}">${j.status}</span>
+                    <span class="text-[10px] font-bold px-2 py-1 rounded-full uppercase flex-shrink-0 ${j.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-surface-container text-on-surface-variant'}">${j.status === 'open' ? 'open' : 'taken'}</span>
                 </div>
+                <button class="text-xs font-bold px-md py-1.5 rounded-lg ${j.status === 'open' ? 'bg-error-container text-on-error-container' : 'bg-primary/10 text-primary'} toggle-status-btn" data-id="${j.id}" data-status="${j.status}">
+                    ${j.status === 'open' ? 'Mark as Taken' : 'Reopen This Job'}
+                </button>
                 <div class="space-y-sm" id="applicants-${j.id}">
                     <p class="text-sm text-on-surface-variant">Loading applicants...</p>
                 </div>
             </div>
         `).join('');
+
+        list.querySelectorAll('.toggle-status-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const jobId = btn.getAttribute('data-id');
+                const currentStatus = btn.getAttribute('data-status');
+                const newStatus = currentStatus === 'open' ? 'closed' : 'open';
+                const confirmMsg = newStatus === 'closed'
+                    ? 'Mark this job as taken? It will disappear from the public job board and no one else will be able to apply.'
+                    : 'Reopen this job so people can apply again?';
+                if (!confirm(confirmMsg)) return;
+
+                const { error } = await supabaseClient.from('jobs').update({ status: newStatus }).eq('id', jobId);
+                if (error) { showError('Could not update job: ' + error.message); return; }
+                loadJobs();
+            });
+        });
 
         jobs.forEach(j => loadApplicants(j.id));
     }
