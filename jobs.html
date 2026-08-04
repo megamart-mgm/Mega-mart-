@@ -309,8 +309,8 @@
 
     async function loadPointsPill() {
         if (!currentUser) return;
-        const { data: profile } = await supabaseClient.from('profiles').select('job_points_balance').eq('id', currentUser.id).maybeSingle();
-        document.getElementById('points_pill_text').textContent = (profile?.job_points_balance ?? 0) + ' Job Points';
+        const { data: profile } = await supabaseClient.from('profiles').select('job_points_balance, is_official').eq('id', currentUser.id).maybeSingle();
+        document.getElementById('points_pill_text').textContent = profile?.is_official ? 'Unlimited Job Points' : (profile?.job_points_balance ?? 0) + ' Job Points';
     }
 
     async function init() {
