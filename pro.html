@@ -255,6 +255,9 @@ notifications
         loadReviews();
         checkPresence();
         supabaseClient.rpc('track_impression', { p_product_id: product.id });
+        supabaseClient.rpc('track_click', { p_product_id: product.id });
+        supabaseClient.rpc('log_analytics_event', { p_store_id: product.store_id, p_product_id: product.id, p_event_type: 'impression' });
+        supabaseClient.rpc('log_analytics_event', { p_store_id: product.store_id, p_product_id: product.id, p_event_type: 'click' });
 
         document.getElementById('loading_state').classList.add('hidden');
         document.getElementById('product_content').classList.remove('hidden');
