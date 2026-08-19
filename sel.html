@@ -9,6 +9,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
@@ -188,6 +189,33 @@ notifications
 <span class="material-symbols-outlined text-sm mr-1">visibility</span>Live
                     </span>
 </div>
+</div>
+</div>
+
+<!-- Live Analytics -->
+<div class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant/20 shadow-sm">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Performance (last 14 days)</h2>
+<span class="flex items-center gap-1 text-xs text-primary font-bold">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Live
+</span>
+</div>
+<div class="grid grid-cols-3 gap-sm mb-md">
+<div class="text-center p-sm bg-surface-container-low rounded-lg">
+<p class="text-2xl font-bold text-primary" id="stat_total_impressions_14d">0</p>
+<p class="text-xs text-on-surface-variant">Impressions</p>
+</div>
+<div class="text-center p-sm bg-surface-container-low rounded-lg">
+<p class="text-2xl font-bold text-primary" id="stat_total_clicks_14d">0</p>
+<p class="text-xs text-on-surface-variant">Clicks</p>
+</div>
+<div class="text-center p-sm bg-surface-container-low rounded-lg">
+<p class="text-2xl font-bold text-primary" id="stat_total_chats_14d">0</p>
+<p class="text-xs text-on-surface-variant">Clients Chatted</p>
+</div>
+</div>
+<div class="relative" style="height: 220px;">
+<canvas id="analytics_chart"></canvas>
 </div>
 </div>
 
@@ -482,6 +510,129 @@ notifications
         badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full ' + labels[status][1];
     }
 
+    // ---------------------------------------------------------------
+    // Live Analytics — 14-day trend of impressions, clicks, and new
+    // client chats, updating live via Realtime (no page refresh needed).
+    // ---------------------------------------------------------------
+    let analyticsChart = null;
+    let dayBuckets = []; // [{ date: 'YYYY-MM-DD', label, impressions, clicks, chats }]
+
+    function dayKey(d) { return d.toISOString().slice(0, 10); }
+
+    function buildEmptyBuckets() {
+        const buckets = [];
+        const today = new Date();
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            buckets.push({
+                date: dayKey(d),
+                label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                impressions: 0, clicks: 0, chats: 0
+            });
+        }
+        return buckets;
+    }
+
+    function bucketFor(dateStr) {
+        const key = dateStr.slice(0, 10);
+        return dayBuckets.find(b => b.date === key);
+    }
+
+    function renderAnalyticsChart() {
+        document.getElementById('stat_total_impressions_14d').textContent = dayBuckets.reduce((s, b) => s + b.impressions, 0);
+        document.getElementById('stat_total_clicks_14d').textContent = dayBuckets.reduce((s, b) => s + b.clicks, 0);
+        document.getElementById('stat_total_chats_14d').textContent = dayBuckets.reduce((s, b) => s + b.chats, 0);
+
+        const labels = dayBuckets.map(b => b.label);
+        const impressions = dayBuckets.map(b => b.impressions);
+        const clicks = dayBuckets.map(b => b.clicks);
+        const chats = dayBuckets.map(b => b.chats);
+
+        if (analyticsChart) {
+            analyticsChart.data.labels = labels;
+            analyticsChart.data.datasets[0].data = impressions;
+            analyticsChart.data.datasets[1].data = clicks;
+            analyticsChart.data.datasets[2].data = chats;
+            analyticsChart.update();
+            return;
+        }
+
+        const ctx = document.getElementById('analytics_chart').getContext('2d');
+        analyticsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Impressions', data: impressions, borderColor: '#006b2c', backgroundColor: 'rgba(0,107,44,0.08)', tension: 0.3, fill: true },
+                    { label: 'Clicks', data: clicks, borderColor: '#f5a524', backgroundColor: 'rgba(245,165,36,0.08)', tension: 0.3, fill: true },
+                    { label: 'Clients Chatted', data: chats, borderColor: '#213145', backgroundColor: 'rgba(33,49,69,0.08)', tension: 0.3, fill: true }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            }
+        });
+    }
+
+    async function loadAnalyticsChart(storeId, sellerId) {
+        dayBuckets = buildEmptyBuckets();
+        const since = dayBuckets[0].date;
+
+        const { data: events } = await supabaseClient
+            .from('analytics_events')
+            .select('event_type, created_at')
+            .eq('store_id', storeId)
+            .gte('created_at', since);
+
+        (events || []).forEach(e => {
+            const b = bucketFor(e.created_at);
+            if (!b) return;
+            if (e.event_type === 'impression') b.impressions++;
+            if (e.event_type === 'click') b.clicks++;
+        });
+
+        // "Clients chatted with" = new conversations started per day
+        const { data: convos } = await supabaseClient
+            .from('conversations')
+            .select('created_at')
+            .eq('seller_id', sellerId)
+            .gte('created_at', since);
+
+        (convos || []).forEach(c => {
+            const b = bucketFor(c.created_at);
+            if (b) b.chats++;
+        });
+
+        renderAnalyticsChart();
+        subscribeAnalyticsRealtime(storeId, sellerId);
+    }
+
+    let analyticsSubscribed = false;
+    function subscribeAnalyticsRealtime(storeId, sellerId) {
+        if (analyticsSubscribed) return;
+        analyticsSubscribed = true;
+
+        supabaseClient
+            .channel('seller-analytics')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'analytics_events', filter: `store_id=eq.${storeId}` }, (payload) => {
+                const b = bucketFor(payload.new.created_at) || dayBuckets[dayBuckets.length - 1];
+                if (payload.new.event_type === 'impression') b.impressions++;
+                if (payload.new.event_type === 'click') b.clicks++;
+                renderAnalyticsChart();
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations', filter: `seller_id=eq.${sellerId}` }, (payload) => {
+                const b = bucketFor(payload.new.created_at) || dayBuckets[dayBuckets.length - 1];
+                b.chats++;
+                renderAnalyticsChart();
+            })
+            .subscribe();
+    }
+
     async function loadDashboard() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
@@ -515,6 +666,8 @@ notifications
             document.getElementById('products_loading').textContent = 'Set up your store to start listing products.';
             return;
         }
+
+        loadAnalyticsChart(storeData.id, user.id);
 
         store = storeData;
         document.getElementById('store_name_subtitle').textContent = store.store_name ? `Overview of ${store.store_name}` : 'Quick overview of your shop';
