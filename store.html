@@ -247,7 +247,10 @@ account_circle
         document.getElementById('next_page_btn').disabled = currentPage >= totalPages - 1;
         document.getElementById('pagination_bar').style.display = filteredProducts.length > PAGE_SIZE ? 'flex' : 'none';
 
-        pageItems.forEach(p => supabaseClient.rpc('track_impression', { p_product_id: p.id }));
+        pageItems.forEach(p => {
+            supabaseClient.rpc('track_impression', { p_product_id: p.id });
+            supabaseClient.rpc('log_analytics_event', { p_store_id: p.store_id, p_product_id: p.id, p_event_type: 'impression' });
+        });
     }
 
     document.getElementById('prev_page_btn').addEventListener('click', () => {
