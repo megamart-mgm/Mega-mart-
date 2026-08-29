@@ -6,6 +6,8 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
 <script id="tailwind-config">
       tailwind.config = { darkMode: "class", theme: { extend: {
         "colors": {
@@ -63,10 +65,33 @@
 <span class="hidden material-symbols-outlined text-on-surface-variant text-lg flex-shrink-0" id="thread_completed_check" title="Marked complete" style="font-variation-settings: 'FILL' 1;">check_circle</span>
 </div>
 
-<!-- Request Completed banner (buyer only, on their own conversations) -->
+<!-- Anti-scam safety notice — always visible, can't be dismissed -->
+<div class="px-sm sm:px-md py-2 bg-amber-50 border-b border-amber-200 flex-shrink-0 flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-600 text-base flex-shrink-0">shield</span>
+<p class="text-[11px] text-amber-900 leading-tight">All payments must be made <strong>through Mega Mart</strong> using Pay Order. Never send money directly to a seller — we can't help recover payments made outside the platform.</p>
+</div>
+
 <div class="hidden px-sm sm:px-md py-sm bg-surface-container-low border-b border-outline-variant/20 flex-shrink-0 flex items-center justify-between gap-sm" id="completion_bar">
 <p class="text-xs text-on-surface-variant flex-1" id="completion_bar_text">Once the seller has delivered, mark this as completed so you can leave a review.</p>
 <button class="flex-shrink-0 bg-primary text-on-primary px-md py-1.5 rounded-lg text-xs font-bold" id="mark_complete_btn">Request Completed</button>
+</div>
+
+<!-- Live order card -->
+<div class="hidden px-sm sm:px-md py-sm bg-primary/5 border-b border-primary/20 flex-shrink-0 space-y-1" id="order_card">
+<div class="flex items-center justify-between gap-sm">
+<div class="min-w-0">
+<p class="text-xs font-bold text-on-surface truncate" id="order_card_title"></p>
+<p class="text-[11px] text-on-surface-variant" id="order_card_status"></p>
+</div>
+<button class="hidden flex-shrink-0 bg-primary text-on-primary px-md py-1.5 rounded-lg text-xs font-bold" id="order_card_action_btn"></button>
+</div>
+</div>
+
+<!-- Seller: propose an order -->
+<div class="hidden px-sm sm:px-md py-sm border-b border-outline-variant/20 flex-shrink-0" id="create_order_bar">
+<button class="w-full h-9 bg-surface-container-low text-primary rounded-lg text-xs font-bold flex items-center justify-center gap-1" id="create_order_btn">
+<span class="material-symbols-outlined text-base">receipt_long</span> Create Order
+</button>
 </div>
 
 <div class="flex-1 overflow-y-auto p-sm sm:p-md space-y-sm" id="message_list"></div>
@@ -82,6 +107,32 @@
 </section>
 
 </main>
+
+<!-- Create Order modal -->
+<div class="fixed inset-0 bg-black/50 z-[85] hidden items-center justify-center p-md" id="create_order_modal">
+<div class="w-full max-w-[380px] bg-white rounded-xl p-lg space-y-md">
+<h3 class="font-bold text-lg text-on-surface">Create an Order</h3>
+<div class="p-sm bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+<span class="material-symbols-outlined text-amber-600 text-base flex-shrink-0">info</span>
+<p class="text-[11px] text-amber-900 leading-tight">The buyer pays this exact amount through Mega Mart. It's held safely until they confirm they've received the order — a ₦50 platform fee applies when released to you.</p>
+</div>
+<div class="space-y-xs">
+<label class="block text-xs font-bold text-on-surface-variant">What's this order for?</label>
+<input class="w-full h-11 px-3 border border-outline-variant rounded-lg text-sm" id="order_title_input" placeholder="e.g. Custom logo design" type="text"/>
+</div>
+<div class="space-y-xs">
+<label class="block text-xs font-bold text-on-surface-variant">Amount (₦)</label>
+<input class="w-full h-11 px-3 border border-outline-variant rounded-lg text-sm" id="order_amount_input" placeholder="0.00" type="number" min="1" step="0.01"/>
+</div>
+<div class="hidden p-sm bg-error-container rounded-lg" id="order_modal_error">
+<p class="text-xs text-on-error-container" id="order_modal_error_text"></p>
+</div>
+<div class="flex gap-sm">
+<button class="flex-1 h-11 bg-surface-container-low rounded-lg text-sm font-bold" id="order_modal_cancel_btn">Cancel</button>
+<button class="flex-1 h-11 bg-primary text-on-primary rounded-lg text-sm font-bold" id="order_modal_submit_btn">Send Order</button>
+</div>
+</div>
+</div>
 
 <!-- Public profile view — like tapping a contact's name in WhatsApp -->
 <div class="fixed inset-0 bg-black/50 z-[85] hidden items-center justify-center p-md" id="profile_view_modal">
