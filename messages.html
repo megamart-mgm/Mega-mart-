@@ -327,6 +327,7 @@
         document.getElementById('composer').classList.remove('hidden');
 
         showCompletionState(!!(cached && cached.completedAt));
+        await loadOrderState(conversationId);
 
         await loadMessages(conversationId);
         await loadConversations(); // refresh unread badges now that this thread is being read
@@ -352,7 +353,7 @@
 
     document.getElementById('mark_complete_btn').addEventListener('click', async () => {
         if (!activeConversation) return;
-        if (!confirm("Mark this request as completed? You'll then be able to leave a review for this product.")) return;
+        if (!confirm("Mark this request as completed? If there's a paid order on this chat, the payment held in escrow will be released to the seller — only do this once you've actually received what you paid for. You'll also be able to leave a review.")) return;
 
         const { error } = await supabaseClient.rpc('mark_conversation_completed', { p_conversation_id: activeConversation });
         if (error) { alert('Could not mark as completed: ' + error.message); return; }
@@ -361,8 +362,149 @@
             conversationCache[activeConversation].completedAt = new Date().toISOString();
         }
         showCompletionState(true);
-        showToast('Marked as completed — you can now leave a review!');
+        await loadOrderState(activeConversation);
+        showToast('Marked as completed — payment released, and you can now leave a review!');
     });
+
+    // ---------------------------------------------------------------
+    // Orders — proposed by the seller, paid by the buyer through
+    // Paystack (never outside the platform), held in escrow, released
+    // automatically when the buyer clicks Request Completed above.
+    // ---------------------------------------------------------------
+    const PAYSTACK_PUBLIC_KEY = "pk_live_383a0e2b83c984d24a655080a848924537c4f3bc";
+    let activeOrder = null;
+    let orderRealtimeChannel = null;
+
+    async function loadOrderState(conversationId) {
+        const cached = conversationCache[conversationId];
+        if (!cached) return;
+
+        const { data: order } = await supabaseClient
+            .from('orders')
+            .select('*')
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        activeOrder = order || null;
+        renderOrderCard(cached);
+        subscribeOrderRealtime(conversationId);
+    }
+
+    function renderOrderCard(cached) {
+        const card = document.getElementById('order_card');
+        const createBar = document.getElementById('create_order_bar');
+        const actionBtn = document.getElementById('order_card_action_btn');
+        const isSeller = !cached.isBuyer;
+
+        actionBtn.classList.add('hidden');
+        actionBtn.onclick = null;
+
+        if (!activeOrder || activeOrder.status === 'cancelled') {
+            card.classList.add('hidden');
+            // Only the seller can propose a new order, and only on
+            // product/store conversations (not job threads)
+            createBar.classList.toggle('hidden', !(isSeller && cached.hasProduct));
+            return;
+        }
+
+        createBar.classList.add('hidden');
+        card.classList.remove('hidden');
+        document.getElementById('order_card_title').textContent = activeOrder.title;
+
+        const statusText = {
+            proposed: `₦${Number(activeOrder.amount).toLocaleString()} — waiting for ${cached.isBuyer ? 'you' : 'buyer'} to accept`,
+            accepted: `₦${Number(activeOrder.amount).toLocaleString()} — accepted, awaiting payment`,
+            paid: `₦${Number(activeOrder.amount).toLocaleString()} paid — held safely until marked completed`,
+            completed: `₦${Number(activeOrder.amount).toLocaleString()} — completed, payment released to seller`
+        };
+        document.getElementById('order_card_status').textContent = statusText[activeOrder.status] || activeOrder.status;
+
+        if (cached.isBuyer && activeOrder.status === 'proposed') {
+            actionBtn.textContent = `Accept & Pay ₦${Number(activeOrder.amount).toLocaleString()}`;
+            actionBtn.classList.remove('hidden');
+            actionBtn.onclick = () => acceptAndPayOrder(activeOrder);
+        } else if (cached.isBuyer && activeOrder.status === 'accepted') {
+            actionBtn.textContent = `Pay ₦${Number(activeOrder.amount).toLocaleString()}`;
+            actionBtn.classList.remove('hidden');
+            actionBtn.onclick = () => payOrder(activeOrder);
+        }
+    }
+
+    function subscribeOrderRealtime(conversationId) {
+        if (orderRealtimeChannel) supabaseClient.removeChannel(orderRealtimeChannel);
+
+        orderRealtimeChannel = supabaseClient
+            .channel('order-' + conversationId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `conversation_id=eq.${conversationId}` }, async () => {
+                await loadOrderState(conversationId);
+                if (activeOrder && activeOrder.status === 'paid') {
+                    showToast('Payment confirmed — funds are held safely in escrow.');
+                }
+            })
+            .subscribe();
+    }
+
+    document.getElementById('create_order_btn').addEventListener('click', () => {
+        document.getElementById('order_title_input').value = '';
+        document.getElementById('order_amount_input').value = '';
+        document.getElementById('order_modal_error').classList.add('hidden');
+        document.getElementById('create_order_modal').classList.remove('hidden');
+        document.getElementById('create_order_modal').classList.add('flex');
+    });
+
+    document.getElementById('order_modal_cancel_btn').addEventListener('click', () => {
+        document.getElementById('create_order_modal').classList.add('hidden');
+        document.getElementById('create_order_modal').classList.remove('flex');
+    });
+
+    document.getElementById('order_modal_submit_btn').addEventListener('click', async () => {
+        const title = document.getElementById('order_title_input').value.trim();
+        const amount = parseFloat(document.getElementById('order_amount_input').value);
+        const errEl = document.getElementById('order_modal_error');
+        const errText = document.getElementById('order_modal_error_text');
+
+        if (!title) { errText.textContent = 'Please describe what this order is for.'; errEl.classList.remove('hidden'); return; }
+        if (!amount || amount <= 0) { errText.textContent = 'Please enter a valid amount.'; errEl.classList.remove('hidden'); return; }
+
+        const { error } = await supabaseClient.rpc('create_order', {
+            p_conversation_id: activeConversation,
+            p_title: title,
+            p_amount: amount
+        });
+
+        if (error) { errText.textContent = error.message; errEl.classList.remove('hidden'); return; }
+
+        document.getElementById('create_order_modal').classList.add('hidden');
+        document.getElementById('create_order_modal').classList.remove('flex');
+        showToast('Order sent to the buyer.');
+        await loadOrderState(activeConversation);
+        await loadMessages(activeConversation);
+    });
+
+    async function acceptAndPayOrder(order) {
+        const { error } = await supabaseClient.rpc('accept_order', { p_order_id: order.id });
+        if (error) { alert('Could not accept order: ' + error.message); return; }
+        await loadOrderState(activeConversation);
+        payOrder({ ...order, status: 'accepted' });
+    }
+
+    function payOrder(order) {
+        const handler = PaystackPop.setup({
+            key: PAYSTACK_PUBLIC_KEY,
+            email: currentUser.email,
+            amount: Math.round(order.amount * 100), // kobo
+            currency: 'NGN',
+            ref: 'MEGAMART-ORDER-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
+            metadata: { purpose: 'order_payment', order_id: order.id, conversation_id: activeConversation },
+            callback: function () {
+                showToast('Payment received! Confirming with Paystack...');
+            },
+            onClose: function () {}
+        });
+        handler.openIframe();
+    }
 
     // ---------------------------------------------------------------
     // Public profile viewer — tap the header (name/avatar), like tapping
