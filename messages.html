@@ -161,6 +161,7 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndleHZkbWltcXFpd2FydnN3d2JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4OTUzNjgsImV4cCI6MjA5ODQ3MTM2OH0.qwVb9IfUgqGsvt8nm-zINQrCtJjzmio8mWgxOWJCgZQ";
     const { createClient } = supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const PAYSTACK_PUBLIC_KEY = "pk_live_383a0e2b83c984d24a655080a848924537c4f3bc";
 
     let currentUser = null;
     let activeConversation = null;
@@ -371,7 +372,6 @@
     // Paystack (never outside the platform), held in escrow, released
     // automatically when the buyer clicks Request Completed above.
     // ---------------------------------------------------------------
-    const PAYSTACK_PUBLIC_KEY = "pk_live_383a0e2b83c984d24a655080a848924537c4f3bc";
     let activeOrder = null;
     let orderRealtimeChannel = null;
 
