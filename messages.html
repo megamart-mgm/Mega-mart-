@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
-<script src="https://js.paystack.co/v1/inline.js"></script>
 <script id="tailwind-config">
       tailwind.config = { darkMode: "class", theme: { extend: {
         "colors": {
@@ -83,7 +82,10 @@
 <p class="text-xs font-bold text-on-surface truncate" id="order_card_title"></p>
 <p class="text-[11px] text-on-surface-variant" id="order_card_status"></p>
 </div>
-<button class="hidden flex-shrink-0 bg-primary text-on-primary px-md py-1.5 rounded-lg text-xs font-bold" id="order_card_action_btn"></button>
+<div class="flex items-center gap-2 flex-shrink-0">
+<button class="hidden border border-outline-variant text-on-surface-variant px-md py-1.5 rounded-lg text-xs font-bold" id="order_card_decline_btn">Decline</button>
+<button class="hidden bg-primary text-on-primary px-md py-1.5 rounded-lg text-xs font-bold" id="order_card_action_btn"></button>
+</div>
 </div>
 </div>
 
@@ -368,9 +370,11 @@
     });
 
     // ---------------------------------------------------------------
-    // Orders — proposed by the seller, paid by the buyer through
-    // Paystack (never outside the platform), held in escrow, released
-    // automatically when the buyer clicks Request Completed above.
+    // Orders — proposed by the seller, then either accepted or declined
+    // by the buyer. Accepted orders are paid through Paystack (never
+    // outside the platform), held in escrow, and released automatically
+    // when the buyer clicks Request Completed above. A declined order
+    // closes out and frees the seller to propose a revised one.
     // ---------------------------------------------------------------
     let activeOrder = null;
     let orderRealtimeChannel = null;
@@ -396,15 +400,22 @@
         const card = document.getElementById('order_card');
         const createBar = document.getElementById('create_order_bar');
         const actionBtn = document.getElementById('order_card_action_btn');
+        const declineBtn = document.getElementById('order_card_decline_btn');
         const isSeller = !cached.isBuyer;
 
         actionBtn.classList.add('hidden');
         actionBtn.onclick = null;
+        declineBtn.classList.add('hidden');
+        declineBtn.onclick = null;
 
-        if (!activeOrder || activeOrder.status === 'cancelled') {
+        // No live order to show — a cancelled or declined order is closed out,
+        // so the seller gets the Create Order bar back to propose a new one.
+        const closed = !activeOrder
+            || activeOrder.status === 'cancelled'
+            || activeOrder.status === 'declined';
+
+        if (closed) {
             card.classList.add('hidden');
-            // Only the seller can propose a new order, and only on
-            // product/store conversations (not job threads)
             createBar.classList.toggle('hidden', !(isSeller && cached.hasProduct));
             return;
         }
@@ -413,20 +424,24 @@
         card.classList.remove('hidden');
         document.getElementById('order_card_title').textContent = activeOrder.title;
 
+        const amount = `₦${Number(activeOrder.amount).toLocaleString()}`;
         const statusText = {
-            proposed: `₦${Number(activeOrder.amount).toLocaleString()} — waiting for ${cached.isBuyer ? 'you' : 'buyer'} to accept`,
-            accepted: `₦${Number(activeOrder.amount).toLocaleString()} — accepted, awaiting payment`,
-            paid: `₦${Number(activeOrder.amount).toLocaleString()} paid — held safely until marked completed`,
-            completed: `₦${Number(activeOrder.amount).toLocaleString()} — completed, payment released to seller`
+            proposed: `${amount} — waiting for ${cached.isBuyer ? 'you' : 'buyer'} to accept or decline`,
+            accepted: `${amount} — accepted, awaiting payment`,
+            paid: `${amount} paid — held safely until marked completed`,
+            completed: `${amount} — completed, payment released to seller`
         };
         document.getElementById('order_card_status').textContent = statusText[activeOrder.status] || activeOrder.status;
 
         if (cached.isBuyer && activeOrder.status === 'proposed') {
-            actionBtn.textContent = `Accept & Pay ₦${Number(activeOrder.amount).toLocaleString()}`;
+            actionBtn.textContent = `Accept & Pay ${amount}`;
             actionBtn.classList.remove('hidden');
             actionBtn.onclick = () => acceptAndPayOrder(activeOrder);
+
+            declineBtn.classList.remove('hidden');
+            declineBtn.onclick = () => declineOrder(activeOrder);
         } else if (cached.isBuyer && activeOrder.status === 'accepted') {
-            actionBtn.textContent = `Pay ₦${Number(activeOrder.amount).toLocaleString()}`;
+            actionBtn.textContent = `Pay ${amount}`;
             actionBtn.classList.remove('hidden');
             actionBtn.onclick = () => payOrder(activeOrder);
         }
@@ -438,9 +453,15 @@
         orderRealtimeChannel = supabaseClient
             .channel('order-' + conversationId)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `conversation_id=eq.${conversationId}` }, async () => {
+                const previousStatus = activeOrder ? activeOrder.status : null;
                 await loadOrderState(conversationId);
+
                 if (activeOrder && activeOrder.status === 'paid') {
                     showToast('Payment confirmed — funds are held safely in escrow.');
+                } else if (!activeOrder && previousStatus === 'proposed') {
+                    // The buyer just declined the order we were showing
+                    showToast('The buyer declined this order.');
+                    await loadMessages(conversationId);
                 }
             })
             .subscribe();
@@ -488,6 +509,20 @@
         if (error) { alert('Could not accept order: ' + error.message); return; }
         await loadOrderState(activeConversation);
         payOrder({ ...order, status: 'accepted' });
+    }
+
+    // Buyer declines a proposed order. The RPC checks server-side that the
+    // caller really is the buyer and that the order is still 'proposed',
+    // so a paid order can never be declined out from under the seller.
+    async function declineOrder(order) {
+        if (!confirm(`Decline this order for ₦${Number(order.amount).toLocaleString()}? The seller will be notified and can send a revised one.`)) return;
+
+        const { error } = await supabaseClient.rpc('decline_order', { p_order_id: order.id });
+        if (error) { alert('Could not decline order: ' + error.message); return; }
+
+        showToast('Order declined.');
+        await loadOrderState(activeConversation);
+        await loadMessages(activeConversation);
     }
 
     function payOrder(order) {
