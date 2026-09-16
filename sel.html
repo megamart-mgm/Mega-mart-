@@ -219,6 +219,20 @@ notifications
 </div>
 </div>
 
+<!-- Wallet -->
+<div class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant/20 shadow-sm">
+<div class="flex justify-between items-center mb-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Wallet</h2>
+<p class="text-3xl font-bold text-primary mt-1" id="wallet_balance_display">₦0.00</p>
+</div>
+<button class="bg-primary text-on-primary px-lg py-2 rounded-lg font-bold" id="withdraw_btn">Withdraw</button>
+</div>
+<div class="space-y-sm" id="wallet_transactions_list">
+<p class="text-sm text-on-surface-variant">Loading...</p>
+</div>
+</div>
+
 <!-- Product Limit Bar -->
 <div class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant/20 shadow-sm">
 <div class="flex justify-between items-center mb-sm">
@@ -270,6 +284,69 @@ notifications
 </div>
 
 </main>
+
+<!-- Withdraw modal -->
+<div class="fixed inset-0 bg-black/50 z-[85] hidden items-center justify-center p-md" id="withdraw_modal">
+<div class="w-full max-w-[420px] bg-white rounded-xl p-lg space-y-md max-h-[90vh] overflow-y-auto">
+<h3 class="font-bold text-lg text-on-surface">Withdraw Funds</h3>
+<p class="text-sm text-on-surface-variant">Available: <strong id="withdraw_available_balance">₦0.00</strong> · A ₦50 processing fee applies.</p>
+
+<div class="space-y-xs">
+<label class="block text-xs font-bold text-on-surface-variant">Amount (₦)</label>
+<input class="w-full h-11 px-3 border border-outline-variant rounded-lg text-sm" id="withdraw_amount_input" placeholder="0.00" type="number" min="51" step="0.01"/>
+</div>
+
+<div class="space-y-xs">
+<label class="block text-xs font-bold text-on-surface-variant">Bank</label>
+<select class="w-full h-11 px-3 border border-outline-variant rounded-lg text-sm bg-white" id="withdraw_bank_select">
+<option value="">Select your bank</option>
+<option data-code="044">Access Bank</option>
+<option data-code="023">Citibank Nigeria</option>
+<option data-code="050">Ecobank Nigeria</option>
+<option data-code="070">Fidelity Bank</option>
+<option data-code="011">First Bank of Nigeria</option>
+<option data-code="214">First City Monument Bank</option>
+<option data-code="058">Guaranty Trust Bank (GTBank)</option>
+<option data-code="030">Heritage Bank</option>
+<option data-code="301">Jaiz Bank</option>
+<option data-code="082">Keystone Bank</option>
+<option data-code="076">Polaris Bank</option>
+<option data-code="221">Stanbic IBTC Bank</option>
+<option data-code="068">Standard Chartered Bank</option>
+<option data-code="232">Sterling Bank</option>
+<option data-code="032">Union Bank of Nigeria</option>
+<option data-code="033">United Bank For Africa (UBA)</option>
+<option data-code="215">Unity Bank</option>
+<option data-code="035">Wema Bank</option>
+<option data-code="057">Zenith Bank</option>
+<option data-code="50515">Moniepoint MFB</option>
+<option data-code="999992">Opay</option>
+<option data-code="100004">Palmpay</option>
+<option data-code="120001">9PSB</option>
+</select>
+</div>
+
+<div class="space-y-xs">
+<label class="block text-xs font-bold text-on-surface-variant">Account Number</label>
+<input class="w-full h-11 px-3 border border-outline-variant rounded-lg text-sm" id="withdraw_account_input" placeholder="0123456789" type="text" maxlength="10"/>
+</div>
+
+<button class="w-full h-10 bg-surface-container-low text-primary rounded-lg text-sm font-bold" id="verify_account_btn">Verify Account</button>
+
+<div class="hidden p-sm bg-green-50 border border-green-200 rounded-lg" id="account_verified_box">
+<p class="text-xs text-green-800">Account name: <strong id="verified_account_name"></strong></p>
+</div>
+
+<div class="hidden p-sm bg-error-container rounded-lg" id="withdraw_error">
+<p class="text-xs text-on-error-container" id="withdraw_error_text"></p>
+</div>
+
+<div class="flex gap-sm">
+<button class="flex-1 h-11 bg-surface-container-low rounded-lg text-sm font-bold" id="withdraw_cancel_btn">Cancel</button>
+<button class="flex-1 h-11 bg-primary text-on-primary rounded-lg text-sm font-bold disabled:opacity-50" id="withdraw_submit_btn" disabled>Request Withdrawal</button>
+</div>
+</div>
+</div>
 
 <!-- BottomNavBar -->
 <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-sm py-xs bg-surface shadow-[0_-1px_3px_0_rgba(0,0,0,0.05)] rounded-t-xl">
