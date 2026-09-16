@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://meet.jit.si/external_api.js"></script>
 <script id="tailwind-config">
       tailwind.config = { darkMode: "class", theme: { extend: {
         "colors": {
@@ -62,6 +63,19 @@
 <p class="text-xs text-on-surface-variant truncate" id="thread_product"></p>
 </div>
 <span class="hidden material-symbols-outlined text-on-surface-variant text-lg flex-shrink-0" id="thread_completed_check" title="Marked complete" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<button class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-surface-container-high flex-shrink-0" id="call_btn" title="Call" onclick="event.stopPropagation(); startCall();">call</button>
+</div>
+
+<!-- Incoming call banner — shown to whoever didn't start the call -->
+<div class="hidden px-sm sm:px-md py-sm bg-primary text-on-primary flex-shrink-0 items-center justify-between gap-sm" id="incoming_call_banner">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined animate-pulse">call</span>
+<p class="text-sm font-bold truncate" id="incoming_call_text">Incoming call...</p>
+</div>
+<div class="flex gap-2 flex-shrink-0">
+<button class="bg-white/20 px-md py-1.5 rounded-lg text-xs font-bold" id="incoming_call_dismiss_btn">Dismiss</button>
+<button class="bg-white text-primary px-md py-1.5 rounded-lg text-xs font-bold" id="incoming_call_join_btn">Join</button>
+</div>
 </div>
 
 <!-- Anti-scam safety notice — always visible, can't be dismissed -->
@@ -109,6 +123,15 @@
 </section>
 
 </main>
+
+<!-- Call modal -->
+<div class="fixed inset-0 bg-black z-[95] hidden flex-col" id="call_modal">
+<div class="flex items-center justify-between px-md h-14 bg-black/80 flex-shrink-0">
+<p class="text-white font-bold truncate" id="call_modal_title">Call</p>
+<button class="material-symbols-outlined text-white p-2 rounded-full hover:bg-white/10" id="call_modal_close_btn">close</button>
+</div>
+<div class="flex-1 min-h-0" id="call_iframe_container"></div>
+</div>
 
 <!-- Create Order modal -->
 <div class="fixed inset-0 bg-black/50 z-[85] hidden items-center justify-center p-md" id="create_order_modal">
@@ -331,6 +354,7 @@
 
         showCompletionState(!!(cached && cached.completedAt));
         await loadOrderState(conversationId);
+        ensureCallSignalChannel(conversationId);
 
         await loadMessages(conversationId);
         await loadConversations(); // refresh unread badges now that this thread is being read
@@ -708,6 +732,127 @@
         list.insertAdjacentHTML('beforeend', renderBubble(data));
         list.scrollTop = list.scrollHeight;
     });
+
+    // ---------------------------------------------------------------
+    // Calling — audio starts by default, video can be toggled on from
+    // Jitsi's own in-call controls, so one button covers both. The room
+    // name is namespaced to this conversation, so only people with that
+    // conversation ID could ever guess it. A Supabase Realtime broadcast
+    // (no DB row needed) tells the other participant a call has started,
+    // even if they're on the conversation list rather than this thread.
+    // ---------------------------------------------------------------
+    let jitsiApi = null;
+    let callSignalChannel = null;
+    let callSignalConversation = null;
+
+    function callRoomName(conversationId) {
+        return 'megamart-conv-' + conversationId.replace(/-/g, '');
+    }
+
+    function ensureCallSignalChannel(conversationId) {
+        if (callSignalChannel && callSignalConversation === conversationId) return callSignalChannel;
+        if (callSignalChannel) supabaseClient.removeChannel(callSignalChannel);
+
+        callSignalConversation = conversationId;
+        callSignalChannel = supabaseClient
+            .channel('call-' + conversationId)
+            .on('broadcast', { event: 'call_started' }, (payload) => {
+                if (payload.payload.caller_id === currentUser.id) return; // it's us
+                showIncomingCallBanner(conversationId, payload.payload.caller_name);
+            })
+            .on('broadcast', { event: 'call_ended' }, (payload) => {
+                hideIncomingCallBanner();
+                if (jitsiApi && payload.payload.conversation_id === conversationId) {
+                    // Other side hung up in a room we might also be viewing elsewhere; no-op here,
+                    // Jitsi itself handles the peer leaving inside the call UI.
+                }
+            })
+            .subscribe();
+        return callSignalChannel;
+    }
+
+    function showIncomingCallBanner(conversationId, callerName) {
+        const banner = document.getElementById('incoming_call_banner');
+        document.getElementById('incoming_call_text').textContent = `${callerName || 'Someone'} is calling...`;
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+
+        document.getElementById('incoming_call_join_btn').onclick = () => {
+            hideIncomingCallBanner();
+            openCallModal(conversationId, false);
+        };
+        document.getElementById('incoming_call_dismiss_btn').onclick = hideIncomingCallBanner;
+
+        if (conversationCache[conversationId]) {
+            showToast(`${callerName || 'Someone'} is calling`);
+        }
+    }
+
+    function hideIncomingCallBanner() {
+        const banner = document.getElementById('incoming_call_banner');
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+    }
+
+    async function startCall() {
+        if (!activeConversation) return;
+        const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', currentUser.id).maybeSingle();
+        const callerName = profile?.full_name || 'Someone';
+
+        ensureCallSignalChannel(activeConversation).send({
+            type: 'broadcast',
+            event: 'call_started',
+            payload: { caller_id: currentUser.id, caller_name: callerName }
+        });
+
+        openCallModal(activeConversation, true);
+    }
+
+    function openCallModal(conversationId, isCaller) {
+        const cached = conversationCache[conversationId];
+        const modal = document.getElementById('call_modal');
+        document.getElementById('call_modal_title').textContent = cached ? cached.otherName : 'Call';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
+
+        jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', {
+            roomName: callRoomName(conversationId),
+            parentNode: document.getElementById('call_iframe_container'),
+            width: '100%',
+            height: '100%',
+            userInfo: { displayName: currentUser.email },
+            configOverwrite: {
+                startWithVideoMuted: true, // audio-first — the person can enable video from Jitsi's toolbar
+                prejoinPageEnabled: false,
+                disableDeepLinking: true
+            },
+            interfaceConfigOverwrite: {
+                TOOLBAR_BUTTONS: ['microphone', 'camera', 'hangup', 'tileview', 'fullscreen']
+            }
+        });
+
+        jitsiApi.addListener('readyToClose', endCall);
+        jitsiApi.addListener('videoConferenceLeft', endCall);
+    }
+
+    function endCall() {
+        if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
+        const modal = document.getElementById('call_modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+
+        if (activeConversation) {
+            ensureCallSignalChannel(activeConversation).send({
+                type: 'broadcast',
+                event: 'call_ended',
+                payload: { conversation_id: activeConversation }
+            });
+        }
+    }
+
+    document.getElementById('call_modal_close_btn').addEventListener('click', endCall);
 
     document.getElementById('mobile_back_btn').addEventListener('click', showListPane);
 
