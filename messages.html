@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
-<script src="https://meet.jit.si/external_api.js"></script>
 <script id="tailwind-config">
       tailwind.config = { darkMode: "class", theme: { extend: {
         "colors": {
@@ -127,15 +126,6 @@
 </section>
 
 </main>
-
-<!-- Call modal -->
-<div class="fixed inset-0 bg-black z-[95] hidden flex-col" id="call_modal">
-<div class="flex items-center justify-between px-md h-14 bg-black/80 flex-shrink-0">
-<p class="text-white font-bold truncate" id="call_modal_title">Call</p>
-<button class="material-symbols-outlined text-white p-2 rounded-full hover:bg-white/10" id="call_modal_close_btn">close</button>
-</div>
-<div class="flex-1 min-h-0" id="call_iframe_container"></div>
-</div>
 
 <!-- Create Order modal -->
 <div class="fixed inset-0 bg-black/50 z-[85] hidden items-center justify-center p-md" id="create_order_modal">
@@ -767,16 +757,19 @@
 
     // ---------------------------------------------------------------
     // Calling — audio starts by default, video can be toggled on from
-    // Jitsi's own in-call controls, so one button covers both. The room
-    // name is namespaced to this conversation, so only people with that
+    // Jitsi's meet.jit.si free server blocks iframe embedding after 5
+    // minutes ("only meant for demo purposes"), so the call opens as a
+    // real browser tab instead of an in-app embed. The room name is
+    // namespaced to this conversation, so only people with that
     // conversation ID could ever guess it. A Supabase Realtime broadcast
     // (no DB row needed) tells the other participant a call has started,
     // even if they're on the conversation list rather than this thread.
     // ---------------------------------------------------------------
-    let jitsiApi = null;
     let callSignalChannel = null;
     let callSignalConversation = null;
-    let callConnectedAt = null;
+    let callWindowRef = null;
+    let callPollTimer = null;
+    let callStartedAt = null;
     let currentCallIsCaller = false;
     let currentCallConversation = null;
 
@@ -795,12 +788,8 @@
                 if (payload.payload.caller_id === currentUser.id) return; // it's us
                 showIncomingCallBanner(conversationId, payload.payload.caller_name);
             })
-            .on('broadcast', { event: 'call_ended' }, (payload) => {
+            .on('broadcast', { event: 'call_ended' }, () => {
                 hideIncomingCallBanner();
-                if (jitsiApi && payload.payload.conversation_id === conversationId) {
-                    // Other side hung up in a room we might also be viewing elsewhere; no-op here,
-                    // Jitsi itself handles the peer leaving inside the call UI.
-                }
             })
             .subscribe();
         return callSignalChannel;
@@ -814,7 +803,7 @@
 
         document.getElementById('incoming_call_join_btn').onclick = () => {
             hideIncomingCallBanner();
-            openCallModal(conversationId, false);
+            launchCall(conversationId, false);
         };
         document.getElementById('incoming_call_dismiss_btn').onclick = hideIncomingCallBanner;
 
@@ -840,41 +829,36 @@
             payload: { caller_id: currentUser.id, caller_name: callerName }
         });
 
-        openCallModal(activeConversation, true);
+        launchCall(activeConversation, true);
     }
 
-    function openCallModal(conversationId, isCaller) {
-        const cached = conversationCache[conversationId];
-        const modal = document.getElementById('call_modal');
-        document.getElementById('call_modal_title').textContent = cached ? cached.otherName : 'Call';
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+    function launchCall(conversationId, isCaller) {
+        // #config.startWithVideoMuted opens audio-only; the person can turn
+        // their camera on from Jitsi's own in-call toolbar whenever they like.
+        const url = `https://meet.jit.si/${callRoomName(conversationId)}#config.startWithVideoMuted=true`;
 
-        if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
+        const win = window.open(url, '_blank');
+        if (!win) {
+            alert('Your browser blocked the call window. Please allow pop-ups for this site and try again.');
+            return;
+        }
 
-        callConnectedAt = null;
+        if (callPollTimer) clearInterval(callPollTimer);
+
+        callWindowRef = win;
+        callStartedAt = Date.now();
         currentCallIsCaller = isCaller;
         currentCallConversation = conversationId;
 
-        jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', {
-            roomName: callRoomName(conversationId),
-            parentNode: document.getElementById('call_iframe_container'),
-            width: '100%',
-            height: '100%',
-            userInfo: { displayName: currentUser.email },
-            configOverwrite: {
-                startWithVideoMuted: true, // audio-first — the person can enable video from Jitsi's toolbar
-                prejoinPageEnabled: false,
-                disableDeepLinking: true
-            },
-            interfaceConfigOverwrite: {
-                TOOLBAR_BUTTONS: ['microphone', 'camera', 'hangup', 'tileview', 'fullscreen']
+        // Poll for the tab closing since we can't get an event across tabs —
+        // this is how we know the call ended and how long it ran.
+        callPollTimer = setInterval(() => {
+            if (callWindowRef && callWindowRef.closed) {
+                clearInterval(callPollTimer);
+                callPollTimer = null;
+                endCall();
             }
-        });
-
-        jitsiApi.addListener('videoConferenceJoined', () => { callConnectedAt = Date.now(); });
-        jitsiApi.addListener('readyToClose', endCall);
-        jitsiApi.addListener('videoConferenceLeft', endCall);
+        }, 1000);
     }
 
     function formatCallDuration(ms) {
@@ -901,18 +885,14 @@
     }
 
     function endCall() {
-        if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
-        const modal = document.getElementById('call_modal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-
         // Only the caller logs the call history entry, so a call that
         // connected doesn't end up with two duplicate log lines — one
-        // from each participant's own hangup.
-        if (currentCallIsCaller && callConnectedAt && currentCallConversation) {
-            logCallHistory(currentCallConversation, Date.now() - callConnectedAt);
+        // from each participant's own tab closing.
+        if (currentCallIsCaller && callStartedAt && currentCallConversation) {
+            logCallHistory(currentCallConversation, Date.now() - callStartedAt);
         }
-        callConnectedAt = null;
+        callStartedAt = null;
+        callWindowRef = null;
 
         if (currentCallConversation) {
             ensureCallSignalChannel(currentCallConversation).send({
@@ -922,8 +902,6 @@
             });
         }
     }
-
-    document.getElementById('call_modal_close_btn').addEventListener('click', endCall);
 
     // ---------------------------------------------------------------
     // Image messages — images only, no video, capped at 8MB. Uploaded
