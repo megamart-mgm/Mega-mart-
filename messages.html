@@ -113,7 +113,11 @@
 <div class="flex-1 overflow-y-auto p-sm sm:p-md space-y-sm" id="message_list"></div>
 
 <div class="p-sm border-t border-outline-variant/20 bg-surface-container-lowest flex-shrink-0 hidden" id="composer">
-<form class="flex gap-sm" id="message_form">
+<form class="flex gap-sm items-center" id="message_form">
+<button class="w-11 h-11 flex-shrink-0 flex items-center justify-center text-on-surface-variant rounded-full hover:bg-surface-container-low" id="attach_image_btn" type="button" title="Send an image">
+<span class="material-symbols-outlined">image</span>
+</button>
+<input accept="image/*" class="hidden" id="image_file_input" type="file"/>
 <input class="flex-1 min-w-0 h-11 px-4 bg-surface-container-low border border-outline-variant rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20" id="message_input" placeholder="Type a message..." autocomplete="off"/>
 <button class="w-11 h-11 bg-primary text-on-primary rounded-full flex items-center justify-center flex-shrink-0" type="submit">
 <span class="material-symbols-outlined">send</span>
@@ -659,6 +663,34 @@
     function renderBubble(m) {
         const mine = m.sender_id === currentUser.id;
         const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // System-style call history entry — centered, not a chat bubble
+        if (m.body && m.body.startsWith('::CALL::')) {
+            const label = m.body.slice('::CALL::'.length);
+            return `
+                <div class="flex justify-center" data-message-id="${m.id}">
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-low rounded-full text-xs text-on-surface-variant">
+                        <span class="material-symbols-outlined text-sm" style="font-size:16px;">call</span>
+                        <span>${escapeHtml(label)}</span>
+                        <span class="opacity-60">· ${time}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Image message
+        if (m.body && m.body.startsWith('::IMG::')) {
+            const url = m.body.slice('::IMG::'.length);
+            return `
+                <div class="flex ${mine ? 'justify-end' : 'justify-start'}" data-message-id="${m.id}">
+                    <a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="max-w-[70%] sm:max-w-[55%] block ${mine ? 'bubble-mine' : 'bubble-theirs'} p-1">
+                        <img src="${escapeHtml(url)}" class="rounded-lg max-h-72 w-full object-cover" loading="lazy" />
+                        <p class="text-[10px] mt-1 px-1 pb-0.5 opacity-70">${time}${mine ? ' · <span class="status-label">' + statusLabel(m) + '</span>' : ''}</p>
+                    </a>
+                </div>
+            `;
+        }
+
         return `
             <div class="flex ${mine ? 'justify-end' : 'justify-start'}" data-message-id="${m.id}">
                 <div class="max-w-[85%] sm:max-w-[75%] px-4 py-2 ${mine ? 'bubble-mine' : 'bubble-theirs'}">
@@ -744,6 +776,9 @@
     let jitsiApi = null;
     let callSignalChannel = null;
     let callSignalConversation = null;
+    let callConnectedAt = null;
+    let currentCallIsCaller = false;
+    let currentCallConversation = null;
 
     function callRoomName(conversationId) {
         return 'megamart-conv-' + conversationId.replace(/-/g, '');
@@ -817,6 +852,10 @@
 
         if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
 
+        callConnectedAt = null;
+        currentCallIsCaller = isCaller;
+        currentCallConversation = conversationId;
+
         jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', {
             roomName: callRoomName(conversationId),
             parentNode: document.getElementById('call_iframe_container'),
@@ -833,8 +872,32 @@
             }
         });
 
+        jitsiApi.addListener('videoConferenceJoined', () => { callConnectedAt = Date.now(); });
         jitsiApi.addListener('readyToClose', endCall);
         jitsiApi.addListener('videoConferenceLeft', endCall);
+    }
+
+    function formatCallDuration(ms) {
+        const totalSeconds = Math.max(1, Math.round(ms / 1000));
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        if (mins === 0) return `${secs}s`;
+        return `${mins}m ${secs}s`;
+    }
+
+    async function logCallHistory(conversationId, durationMs) {
+        const body = '::CALL::Call ended · ' + formatCallDuration(durationMs) + ' spent';
+        const { data, error } = await supabaseClient.from('messages').insert({
+            conversation_id: conversationId,
+            sender_id: currentUser.id,
+            body
+        }).select().maybeSingle();
+
+        if (!error && data && conversationId === activeConversation) {
+            const list = document.getElementById('message_list');
+            list.insertAdjacentHTML('beforeend', renderBubble(data));
+            list.scrollTop = list.scrollHeight;
+        }
     }
 
     function endCall() {
@@ -843,16 +906,78 @@
         modal.classList.add('hidden');
         modal.classList.remove('flex');
 
-        if (activeConversation) {
-            ensureCallSignalChannel(activeConversation).send({
+        // Only the caller logs the call history entry, so a call that
+        // connected doesn't end up with two duplicate log lines — one
+        // from each participant's own hangup.
+        if (currentCallIsCaller && callConnectedAt && currentCallConversation) {
+            logCallHistory(currentCallConversation, Date.now() - callConnectedAt);
+        }
+        callConnectedAt = null;
+
+        if (currentCallConversation) {
+            ensureCallSignalChannel(currentCallConversation).send({
                 type: 'broadcast',
                 event: 'call_ended',
-                payload: { conversation_id: activeConversation }
+                payload: { conversation_id: currentCallConversation }
             });
         }
     }
 
     document.getElementById('call_modal_close_btn').addEventListener('click', endCall);
+
+    // ---------------------------------------------------------------
+    // Image messages — images only, no video, capped at 8MB. Uploaded
+    // to the public 'chat-images' storage bucket, then sent as a normal
+    // message row whose body is a marker + public URL, so renderBubble
+    // can show it as an image instead of text.
+    // ---------------------------------------------------------------
+    const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+    document.getElementById('attach_image_btn').addEventListener('click', () => {
+        if (!activeConversation) return;
+        document.getElementById('image_file_input').click();
+    });
+
+    document.getElementById('image_file_input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        e.target.value = ''; // allow picking the same file again later
+        if (!file || !activeConversation) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Only images can be sent here — no videos yet.');
+            return;
+        }
+        if (file.size > MAX_IMAGE_BYTES) {
+            alert('That image is too large. Please pick one under 8MB.');
+            return;
+        }
+
+        showToast('Sending image...');
+
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${activeConversation}/${Date.now()}-${Math.floor(Math.random() * 100000)}.${ext}`;
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from('chat-images')
+            .upload(path, file, { contentType: file.type, upsert: false });
+
+        if (uploadError) { alert('Could not send image: ' + uploadError.message); return; }
+
+        const { data: publicUrlData } = supabaseClient.storage.from('chat-images').getPublicUrl(path);
+        const imageUrl = publicUrlData.publicUrl;
+
+        const { data, error } = await supabaseClient.from('messages').insert({
+            conversation_id: activeConversation,
+            sender_id: currentUser.id,
+            body: '::IMG::' + imageUrl
+        }).select().maybeSingle();
+
+        if (error) { alert('Could not send image: ' + error.message); return; }
+
+        const list = document.getElementById('message_list');
+        list.insertAdjacentHTML('beforeend', renderBubble(data));
+        list.scrollTop = list.scrollHeight;
+    });
 
     document.getElementById('mobile_back_btn').addEventListener('click', showListPane);
 
