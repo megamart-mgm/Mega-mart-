@@ -123,6 +123,9 @@ notifications
 <a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#all_sales">
 <span class="material-symbols-outlined">receipt_long</span> All Sales
                 </a>
+<a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="history.html">
+<span class="material-symbols-outlined">history</span> History
+                </a>
 <a class="flex items-center gap-sm p-sm rounded-lg hover:bg-surface-container-low font-label-md text-on-surface-variant" href="#all_products">
 <span class="material-symbols-outlined">group</span> Customers
                 </a>
@@ -237,6 +240,7 @@ notifications
 <div class="space-y-sm" id="wallet_transactions_list">
 <p class="text-sm text-on-surface-variant">Loading...</p>
 </div>
+<a class="block text-center text-primary text-sm font-bold mt-md hover:underline" href="history.html">View full history →</a>
 </div>
 
 <!-- Product Limit Bar -->
@@ -716,6 +720,185 @@ notifications
             .subscribe();
     }
 
+    // ---------------------------------------------------------------
+    // Wallet — balance + recent transactions, live via Realtime. The
+    // balance is credited automatically by a DB trigger the moment an
+    // order is marked completed (see wallet-schema.sql), so this just
+    // reflects what's already in stores.wallet_balance.
+    // ---------------------------------------------------------------
+    let walletRealtimeChannel = null;
+
+    async function loadWallet(storeId) {
+        const { data: storeRow } = await supabaseClient.from('stores').select('wallet_balance').eq('id', storeId).maybeSingle();
+        const balance = Number(storeRow?.wallet_balance || 0);
+        if (store) store.wallet_balance = balance;
+
+        document.getElementById('wallet_balance_display').textContent = '₦' + balance.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        document.getElementById('withdraw_available_balance').textContent = '₦' + balance.toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+        const { data: txs, error } = await supabaseClient
+            .from('wallet_transactions')
+            .select('*')
+            .eq('store_id', storeId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const list = document.getElementById('wallet_transactions_list');
+        if (error) { list.innerHTML = `<p class="text-error text-sm">${error.message}</p>`; return; }
+        if (!txs || txs.length === 0) { list.innerHTML = '<p class="text-sm text-on-surface-variant">No transactions yet.</p>'; return; }
+
+        list.innerHTML = txs.map(renderWalletTxRow).join('');
+        subscribeWalletRealtime(storeId);
+    }
+
+    function walletStatusBadge(status) {
+        const map = {
+            pending: 'bg-surface-container text-on-surface-variant',
+            completed: 'bg-primary-container/20 text-primary',
+            success: 'bg-primary-container/20 text-primary',
+            failed: 'bg-error-container text-on-error-container'
+        };
+        return map[status] || 'bg-surface-container text-on-surface-variant';
+    }
+
+    function walletTypeLabel(type) {
+        return { sale: 'Sale', withdrawal: 'Withdrawal', fee: 'Fee', refund: 'Refund' }[type] || type;
+    }
+
+    function renderWalletTxRow(tx) {
+        const positive = Number(tx.amount) >= 0;
+        const amountLabel = (positive ? '+' : '-') + '₦' + Math.abs(Number(tx.amount)).toLocaleString(undefined, { minimumFractionDigits: 2 });
+        return `
+            <div class="flex items-center justify-between p-sm hover:bg-surface-container-low rounded-lg">
+                <div class="min-w-0">
+                    <p class="font-label-md text-on-surface truncate">${walletTypeLabel(tx.type)}</p>
+                    <p class="text-[11px] text-on-surface-variant">${new Date(tx.created_at).toLocaleString()}</p>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <p class="font-bold ${positive ? 'text-primary' : 'text-on-surface'}">${amountLabel}</p>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${walletStatusBadge(tx.status)}">${tx.status.toUpperCase()}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function subscribeWalletRealtime(storeId) {
+        if (walletRealtimeChannel) return; // already subscribed for this session
+        walletRealtimeChannel = supabaseClient
+            .channel('wallet-' + storeId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'wallet_transactions', filter: `store_id=eq.${storeId}` }, () => loadWallet(storeId))
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stores', filter: `id=eq.${storeId}` }, (payload) => {
+                const balance = Number(payload.new.wallet_balance || 0);
+                if (store) store.wallet_balance = balance;
+                document.getElementById('wallet_balance_display').textContent = '₦' + balance.toLocaleString(undefined, { minimumFractionDigits: 2 });
+                document.getElementById('withdraw_available_balance').textContent = '₦' + balance.toLocaleString(undefined, { minimumFractionDigits: 2 });
+            })
+            .subscribe();
+    }
+
+    // ---------------------------------------------------------------
+    // Withdraw modal — verify the account with Paystack first (so the
+    // seller sees the real account name before anything moves), then
+    // hand off to the initiate-withdrawal Edge Function, which debits
+    // the wallet and starts the Paystack transfer server-side.
+    // ---------------------------------------------------------------
+    let verifiedAccountName = null;
+
+    document.getElementById('withdraw_btn').addEventListener('click', () => {
+        document.getElementById('withdraw_amount_input').value = '';
+        document.getElementById('withdraw_bank_select').value = '';
+        document.getElementById('withdraw_account_input').value = '';
+        document.getElementById('account_verified_box').classList.add('hidden');
+        document.getElementById('withdraw_error').classList.add('hidden');
+        document.getElementById('withdraw_submit_btn').disabled = true;
+        verifiedAccountName = null;
+        document.getElementById('withdraw_modal').classList.remove('hidden');
+        document.getElementById('withdraw_modal').classList.add('flex');
+    });
+
+    document.getElementById('withdraw_cancel_btn').addEventListener('click', () => {
+        document.getElementById('withdraw_modal').classList.add('hidden');
+        document.getElementById('withdraw_modal').classList.remove('flex');
+    });
+
+    function resetAccountVerification() {
+        verifiedAccountName = null;
+        document.getElementById('account_verified_box').classList.add('hidden');
+        document.getElementById('withdraw_submit_btn').disabled = true;
+    }
+    document.getElementById('withdraw_bank_select').addEventListener('change', resetAccountVerification);
+    document.getElementById('withdraw_account_input').addEventListener('input', resetAccountVerification);
+
+    document.getElementById('verify_account_btn').addEventListener('click', async () => {
+        const bankSelect = document.getElementById('withdraw_bank_select');
+        const bankCode = bankSelect.selectedOptions[0]?.getAttribute('data-code');
+        const accountNumber = document.getElementById('withdraw_account_input').value.trim();
+        const errEl = document.getElementById('withdraw_error');
+        const errText = document.getElementById('withdraw_error_text');
+        errEl.classList.add('hidden');
+
+        if (!bankCode) { errText.textContent = 'Please select your bank.'; errEl.classList.remove('hidden'); return; }
+        if (accountNumber.length !== 10) { errText.textContent = 'Enter a valid 10-digit account number.'; errEl.classList.remove('hidden'); return; }
+
+        const btn = document.getElementById('verify_account_btn');
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+
+        const { data, error } = await supabaseClient.functions.invoke('resolve-account', {
+            body: { account_number: accountNumber, bank_code: bankCode }
+        });
+
+        btn.disabled = false;
+        btn.textContent = 'Verify Account';
+
+        if (error || !data?.ok) {
+            errText.textContent = (data && data.error) || 'Could not verify this account. Check the details and try again.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        verifiedAccountName = data.account_name;
+        document.getElementById('verified_account_name').textContent = data.account_name;
+        document.getElementById('account_verified_box').classList.remove('hidden');
+        document.getElementById('withdraw_submit_btn').disabled = false;
+    });
+
+    document.getElementById('withdraw_submit_btn').addEventListener('click', async () => {
+        const bankSelect = document.getElementById('withdraw_bank_select');
+        const bankCode = bankSelect.selectedOptions[0]?.getAttribute('data-code');
+        const accountNumber = document.getElementById('withdraw_account_input').value.trim();
+        const amount = parseFloat(document.getElementById('withdraw_amount_input').value);
+        const errEl = document.getElementById('withdraw_error');
+        const errText = document.getElementById('withdraw_error_text');
+        errEl.classList.add('hidden');
+
+        if (!verifiedAccountName) { errText.textContent = 'Please verify the account first.'; errEl.classList.remove('hidden'); return; }
+        if (!amount || amount < 51) { errText.textContent = 'Minimum withdrawal is ₦51.'; errEl.classList.remove('hidden'); return; }
+        if (!store || amount > Number(store.wallet_balance)) { errText.textContent = 'Amount exceeds your available balance.'; errEl.classList.remove('hidden'); return; }
+
+        const btn = document.getElementById('withdraw_submit_btn');
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        const { data, error } = await supabaseClient.functions.invoke('initiate-withdrawal', {
+            body: { account_number: accountNumber, bank_code: bankCode, account_name: verifiedAccountName, amount }
+        });
+
+        btn.disabled = false;
+        btn.textContent = 'Request Withdrawal';
+
+        if (error || !data?.ok) {
+            errText.textContent = (data && data.error) || 'Could not start the withdrawal. Please try again.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+
+        document.getElementById('withdraw_modal').classList.add('hidden');
+        document.getElementById('withdraw_modal').classList.remove('flex');
+        showToast('Withdrawal requested — funds are on the way.');
+        if (store) loadWallet(store.id);
+    });
+
     async function loadDashboard() {
         const { data: { user } } = await supabaseClient.auth.getUser();
         if (!user) {
@@ -758,6 +941,8 @@ notifications
         const badge = document.getElementById('plan_badge');
         badge.textContent = store.plan.charAt(0).toUpperCase() + store.plan.slice(1) + ' Plan';
         badge.className = 'hidden md:inline-block text-label-sm font-label-sm px-3 py-1 rounded-full plan-badge-' + store.plan;
+
+        loadWallet(store.id);
 
         // Store link
         if (store.store_username) {
