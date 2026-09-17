@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
-      <head>
+<html class="light" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Messages | Mega Mart</title>
@@ -549,6 +548,15 @@
         await loadMessages(activeConversation);
     }
 
+    // ---------------------------------------------------------------
+    // Payment — Paystack's popup only tells the BROWSER that payment
+    // happened; that alone is never trusted. The callback below asks our
+    // verify-payment Edge Function to confirm the transaction directly
+    // with Paystack's servers (using the secret key, which never appears
+    // in this file) before the order is marked paid. A matching Paystack
+    // webhook pointed at the same function is the fallback in case the
+    // browser closes before this callback finishes.
+    // ---------------------------------------------------------------
     function payOrder(order) {
         const handler = PaystackPop.setup({
             key: PAYSTACK_PUBLIC_KEY,
@@ -557,8 +565,23 @@
             currency: 'NGN',
             ref: 'MEGAMART-ORDER-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
             metadata: { purpose: 'order_payment', order_id: order.id, conversation_id: activeConversation },
-            callback: function () {
-                showToast('Payment received! Confirming with Paystack...');
+            callback: function (response) {
+                showToast('Payment received! Confirming...');
+
+                fetch('https://wexvdmimqqiwarvswwbi.supabase.co/functions/v1/verify-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reference: response.reference, order_id: order.id })
+                })
+                    .then(async (res) => {
+                        const json = await res.json();
+                        showToast(json.ok ? 'Payment confirmed!' : 'Payment made — confirming shortly, refresh in a moment.');
+                        await loadOrderState(activeConversation);
+                        await loadMessages(activeConversation);
+                    })
+                    .catch(() => {
+                        showToast('Payment made — confirming shortly.');
+                    });
             },
             onClose: function () {}
         });
@@ -763,13 +786,14 @@
 
     // ---------------------------------------------------------------
     // Calling — audio starts by default, video can be toggled on from
-    // Jitsi's meet.jit.si free server blocks iframe embedding after 5
-    // minutes ("only meant for demo purposes"), so the call opens as a
-    // real browser tab instead of an in-app embed. The room name is
-    // namespaced to this conversation, so only people with that
-    // conversation ID could ever guess it. A Supabase Realtime broadcast
-    // (no DB row needed) tells the other participant a call has started,
-    // even if they're on the conversation list rather than this thread.
+    // Jitsi's own in-call controls. meet.jit.si's free server blocks
+    // iframe embedding after 5 minutes ("only meant for demo purposes"),
+    // so the call opens as a real browser tab instead of an in-app
+    // embed. The room name is namespaced to this conversation, so only
+    // people with that conversation ID could ever guess it. A Supabase
+    // Realtime broadcast (no DB row needed) tells the other participant
+    // a call has started, even if they're on the conversation list
+    // rather than this thread.
     // ---------------------------------------------------------------
     let callSignalChannel = null;
     let callSignalConversation = null;
